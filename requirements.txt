@@ -1,0 +1,14 @@
+Flask
+Flask-SQLAlchemy
+Flask-Migrate
+Flask-SocketIO
+Flask-JWT-Extended
+Flask-Cors
+Flask-Caching
+Flask-MonitoringDashboard
+werkzeug
+python-dotenv
+eventlet
+osmnx
+networkx
+bcrypt
