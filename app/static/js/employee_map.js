@@ -8,7 +8,24 @@ document.addEventListener('DOMContentLoaded', (event) => {
     let tripLine = null;
     let myTripId = null;
     let myCabId = null;
-    const otherCabMarkers = {}; // New: To store markers for other cabs on trip
+    const otherCabMarkers = {};
+
+    // --- NEW: Helper function to read a cookie by name ---
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
 
     // --- Initial check for user authentication ---
     if (typeof userPublicId === 'undefined' || !userPublicId) {
@@ -67,7 +84,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     // Draw other cabs on trip
     if (typeof onTripCabs !== 'undefined') {
         onTripCabs.forEach(cab => {
-            if (cab.id !== myCabId && cab.status == "on_trip") { // Don't draw if it's my allocated cab
+            if (cab.id !== myCabId && cab.status == "on_trip") {
                 otherCabMarkers[cab.id] = L.marker([cab.current_lat, cab.current_lon], { icon: icons.onTripOther })
                     .addTo(map)
                     .bindPopup(`Cab ID: ${cab.id}<br>Status: On Trip`);
@@ -78,7 +95,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     // Draw my allocated cab if any
     if (typeof allocatedCab !== 'undefined' && allocatedCab) {
         myCabId = allocatedCab.id;
-        myTripId = allocatedCab.trip_id; // Assuming trip_id is passed with allocatedCab
+        myTripId = allocatedCab.trip_id;
         allocatedCabMarker = L.marker([allocatedCab.current_lat, allocatedCab.current_lon], { icon: icons.myCab })
             .addTo(map)
             .bindPopup(`My Cab<br>ID: ${allocatedCab.id}`);
@@ -86,7 +103,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
         statusMessage.textContent = `Cab ${myCabId} is on the way!`;
     }
 
-    // --- Request Trip Button ---
+    // --- Request Trip Button (MODIFIED) ---
     requestTripBtn.addEventListener('click', async () => {
         if (!myLocationMarker) {
             statusMessage.textContent = 'Error: My location not set.';
@@ -96,18 +113,27 @@ document.addEventListener('DOMContentLoaded', (event) => {
         requestTripBtn.disabled = true;
 
         try {
+            // Get the CSRF token from the cookie
+            const csrfToken = getCookie('csrf_access_token');
+
             const response = await fetch('/employee/request-trip', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    // Add the token to the request headers
+                    'X-CSRF-Token': csrfToken
+                },
                 credentials: 'include',
                 body: JSON.stringify({ lat: myLocationMarker.getLatLng().lat, lon: myLocationMarker.getLatLng().lng })
             });
+
             const data = await response.json();
             if (response.ok) {
                 myTripId = data.trip_id;
                 statusMessage.textContent = `Trip Requested (ID: ${myTripId}). Waiting for allocation.`;
             } else {
-                statusMessage.textContent = `Error: ${data.message}`;
+                // Handle both 'message' and 'msg' for the error key from Flask
+                statusMessage.textContent = `Error: ${data.message || data.msg}`;
                 requestTripBtn.disabled = false;
             }
         } catch (error) {
@@ -123,7 +149,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     socket.on('connect', () => console.log('Connected to WebSocket for employee dashboard.'));
 
     socket.on('trip_allocated', (data) => {
-        if (data.employee_id === userPublicId) { // Use userPublicId for comparison
+        if (data.employee_id === userPublicId) {
             console.log('My trip has been allocated!:', data);
             myCabId = data.cab_id;
             myTripId = data.trip_id;
@@ -150,7 +176,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
         const { cab_id, lat, lon, status } = data;
         const cabLatLng = [lat, lon];
 
-        // --- Logic for My Allocated Cab (This part is unchanged) ---
         if (cab_id === myCabId) {
             if (allocatedCabMarker) {
                 allocatedCabMarker.setLatLng(cabLatLng);
@@ -159,27 +184,21 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 }
             }
         } 
-        // --- CORRECTED LOGIC for All Other Cabs ---
         else {
-            // Case 1: The cab is ON a trip. It should be visible on the map.
             if (status === 'on_trip') {
-                // If we already have a marker for this cab, just move it.
                 if (otherCabMarkers[cab_id]) {
                     otherCabMarkers[cab_id].setLatLng(cabLatLng);
                 } 
-                // Otherwise, create a new marker for it.
                 else {
                     otherCabMarkers[cab_id] = L.marker(cabLatLng, { icon: icons.onTripOther })
                         .addTo(map)
                         .bindPopup(`Cab ID: ${cab_id}<br>Status: On Trip`);
                 }
             }
-            // Case 2: The cab is NOT on a trip (e.g., 'available'). It should NOT be visible.
             else {
-                // If a marker exists for this cab, it means its trip just ended. Remove it.
                 if (otherCabMarkers[cab_id]) {
-                    map.removeLayer(otherCabMarkers[cab_id]); // Remove marker from the map
-                    delete otherCabMarkers[cab_id];          // Remove marker from our tracking object
+                    map.removeLayer(otherCabMarkers[cab_id]);
+                    delete otherCabMarkers[cab_id];
                 }
             }
         }

@@ -8,6 +8,22 @@ document.addEventListener('DOMContentLoaded', (event) => {
     const cabMarkers = {};
     const pendingTripsList = document.getElementById('trip-requests-ul');
 
+    // --- NEW: Helper function to read a cookie by name ---
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
     // --- Custom Icons ---
     const createIcon = (color) => L.icon({
         iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`,
@@ -20,7 +36,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
     const icons = {
         available: createIcon('green'),
-        on_trip: createIcon('yellow') // Changed to yellow
+        on_trip: createIcon('yellow')
     };
 
     // --- Map Legend ---
@@ -40,7 +56,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     };
     legend.addTo(map);
 
-    // --- Helper to add a pending trip to the list ---
+    // --- Helper to add a pending trip to the list (MODIFIED) ---
     function addPendingTripToList(trip) {
         const listItem = document.createElement('li');
         listItem.id = `trip-${trip.id}`;
@@ -56,18 +72,27 @@ document.addEventListener('DOMContentLoaded', (event) => {
         // Add click listener to the allocate button
         listItem.querySelector('.allocate-btn').addEventListener('click', async (e) => {
             const tripId = e.target.dataset.tripId;
-            e.target.disabled = true; // Disable button to prevent multiple clicks
+            e.target.disabled = true;
             e.target.textContent = 'Allocating...';
 
             try {
-                const response = await fetch(`/admin/trips/${tripId}/allocate`, { method: 'POST' });
+                // Get the CSRF token
+                const csrfToken = getCookie('csrf_access_token');
+
+                const response = await fetch(`/admin/trips/${tripId}/allocate`, {
+                    method: 'POST',
+                    // Add the required header for CSRF protection
+                    headers: {
+                        'X-CSRF-Token': csrfToken
+                    }
+                });
+                
                 const data = await response.json();
                 if (!response.ok) {
-                    alert(`Allocation failed: ${data.message}`);
+                    alert(`Allocation failed: ${data.message || data.msg}`);
                     e.target.disabled = false;
                     e.target.textContent = 'Allocate Cab';
                 }
-                // Success is handled by the 'trip_allocated' WebSocket event
             } catch (error) {
                 alert('An error occurred during allocation.');
                 console.error(error);
@@ -78,7 +103,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
     }
 
     // --- Initial Drawing ---
-    // Draw all cabs
     if (typeof allCabs !== 'undefined') {
         allCabs.forEach(cab => {
             const icon = cab.status === 'available' ? icons.available : icons.on_trip;
@@ -88,7 +112,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
         });
     }
 
-    // Populate pending trips list
     if (typeof pendingTrips !== 'undefined') {
         pendingTrips.forEach(trip => {
             addPendingTripToList(trip);
@@ -110,7 +133,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
             cabMarkers[cab_id].setLatLng([lat, lon]).setIcon(icon);
             cabMarkers[cab_id].getPopup().setContent(`<b>Cab ID:</b> ${cab_id}<br><b>Status:</b> ${status}`);
         } else {
-            // If a cab wasn't part of initial load, add it now
             cabMarkers[cab_id] = L.marker([lat, lon], { icon: icon })
                 .addTo(map)
                 .bindPopup(`<b>Cab ID:</b> ${cab_id}<br><b>Status:</b> ${status}`);
@@ -126,13 +148,11 @@ document.addEventListener('DOMContentLoaded', (event) => {
         console.log('Trip allocated event received:', data);
         const { trip_id, cab_id } = data;
 
-        // Remove from pending list
         const listItem = document.getElementById(`trip-${trip_id}`);
         if (listItem) {
             listItem.remove();
         }
 
-        // Update cab marker status on map
         if (cabMarkers[cab_id]) {
             cabMarkers[cab_id].setIcon(icons.on_trip);
             cabMarkers[cab_id].getPopup().setContent(`<b>Cab ID:</b> ${cab_id}<br><b>Status:</b> On Trip (Allocated)`);
