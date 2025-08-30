@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     // Draw other cabs on trip
     if (typeof onTripCabs !== 'undefined') {
         onTripCabs.forEach(cab => {
-            if (cab.id !== myCabId) { // Don't draw if it's my allocated cab
+            if (cab.id !== myCabId && cab.status == "on_trip") { // Don't draw if it's my allocated cab
                 otherCabMarkers[cab.id] = L.marker([cab.current_lat, cab.current_lon], { icon: icons.onTripOther })
                     .addTo(map)
                     .bindPopup(`Cab ID: ${cab.id}<br>Status: On Trip`);
@@ -150,23 +150,37 @@ document.addEventListener('DOMContentLoaded', (event) => {
         const { cab_id, lat, lon, status } = data;
         const cabLatLng = [lat, lon];
 
-        if (cab_id === myCabId) { // Update my allocated cab
+        // --- Logic for My Allocated Cab (This part is unchanged) ---
+        if (cab_id === myCabId) {
             if (allocatedCabMarker) {
                 allocatedCabMarker.setLatLng(cabLatLng);
                 if (tripLine) {
                     tripLine.setLatLngs([myLocationMarker.getLatLng(), cabLatLng]);
                 }
             }
-        } else { // Update other cabs on trip
-            const icon = icons.onTripOther; // Other cabs are always yellow
-            if (otherCabMarkers[cab_id]) {
-                otherCabMarkers[cab_id].setLatLng(cabLatLng).setIcon(icon);
-                otherCabMarkers[cab_id].getPopup().setContent(`Cab ID: ${cab_id}<br>Status: ${status}`);
-            } else {
-                // If a new cab on trip appears (e.g., from simulator), add it
-                otherCabMarkers[cab_id] = L.marker(cabLatLng, { icon: icon })
-                    .addTo(map)
-                    .bindPopup(`Cab ID: ${cab_id}<br>Status: ${status}`);
+        } 
+        // --- CORRECTED LOGIC for All Other Cabs ---
+        else {
+            // Case 1: The cab is ON a trip. It should be visible on the map.
+            if (status === 'on_trip') {
+                // If we already have a marker for this cab, just move it.
+                if (otherCabMarkers[cab_id]) {
+                    otherCabMarkers[cab_id].setLatLng(cabLatLng);
+                } 
+                // Otherwise, create a new marker for it.
+                else {
+                    otherCabMarkers[cab_id] = L.marker(cabLatLng, { icon: icons.onTripOther })
+                        .addTo(map)
+                        .bindPopup(`Cab ID: ${cab_id}<br>Status: On Trip`);
+                }
+            }
+            // Case 2: The cab is NOT on a trip (e.g., 'available'). It should NOT be visible.
+            else {
+                // If a marker exists for this cab, it means its trip just ended. Remove it.
+                if (otherCabMarkers[cab_id]) {
+                    map.removeLayer(otherCabMarkers[cab_id]); // Remove marker from the map
+                    delete otherCabMarkers[cab_id];          // Remove marker from our tracking object
+                }
             }
         }
     });
