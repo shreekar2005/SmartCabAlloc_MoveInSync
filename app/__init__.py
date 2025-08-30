@@ -1,8 +1,10 @@
 from flask import Flask, jsonify
 from werkzeug.exceptions import HTTPException
 import os
+import traceback
 
 from.extensions import db, migrate, socketio, jwt, cache, cors
+from.models import Cab
 from config import Config
 import flask_monitoringdashboard as dashboard
 
@@ -51,7 +53,8 @@ def create_app(config_class=Config):
     def handle_generic_exception(e):
         # This is a fallback for unhandled errors, ensuring a JSON response.
         # In production, you would log this error extensively.
-        app.logger.error(f"Unhandled exception: {str(e)}")
+        tb = traceback.format_exc()
+        app.logger.error(f"Unhandled exception: {str(e)}\n{tb}")
         response = {
             "error": "Internal Server Error",
             "message": "An unexpected error occurred. Please try again later."
@@ -61,9 +64,17 @@ def create_app(config_class=Config):
 
     # This section addresses the "Real-Time Location Data Integration" requirement. [1]
     # It defines the WebSocket event handlers for real-time communication.
+    from flask_socketio import join_room
+
     @socketio.on('connect')
     def handle_connect():
         print('Client connected')
+
+    @socketio.on('join_admin_room')
+    def handle_join_admin_room():
+        # This allows us to broadcast messages specifically to admins
+        join_room('admins')
+        print('An admin connected and joined the admin room.')
 
     @socketio.on('disconnect')
     def handle_disconnect():

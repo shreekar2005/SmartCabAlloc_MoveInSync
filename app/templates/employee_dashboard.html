@@ -1,12 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Smart Cab Real-Time Map</title>
+    <title>Employee Dashboard</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <style>
         #map { height: 100vh; }
+        body { font-family: sans-serif; margin: 0; }
+        #info-box {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
         .legend {
             padding: 6px 8px;
             font: 14px/16px Arial, Helvetica, sans-serif;
@@ -27,23 +38,21 @@
 <body>
 
 <div id="map"></div>
-
-<div id="pending-trips-list" style="position: absolute; top: 10px; left: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto;">
-    <h3>Pending Trip Requests</h3>
-    <ul id="trip-requests-ul" style="list-style: none; padding: 0;">
-        <!-- Trip requests will be added here by JavaScript -->
-    </ul>
+<div id="info-box">
+    <p id="status-message">Click "Request Trip" to get a cab.</p>
+    <button id="request-trip-btn">Request Trip at My Location</button>
 </div>
 
 <script>
-    // Pass data from Flask backend to JavaScript
-    var allCabs = {{ all_cabs|tojson }};
-    var pendingTrips = {{ pending_trips|tojson }};
+    var userLocation = {{ user_location|tojson }};
+    var onTripCabs = {{ on_trip_cabs|tojson }};
+    var allocatedCab = {{ allocated_cab|tojson }};
+    var userPublicId = {{ user_public_id|tojson }};
 </script>
 
 <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script src="{{ url_for('static', filename='js/employee_map.js') }}"></script>
 
 </body>
 </html>

@@ -1,0 +1,82 @@
+Step 1: Set Up the Environment
+
+   1. Install Dependencies:
+      Open your terminal and run the following command in the project's root directory to install the necessary Python packages:
+
+   1     pip install -r requirements.txt
+
+   2. Initialize the Database:
+      This project uses Flask-Migrate to manage database schemas. Run these commands to set up your database:
+
+   1     export FLASK_APP=run.py
+   2     flask db init  # Run this only if the 'migrations' directory doesn't exist
+   3     flask db migrate -m "Initial migration"
+   4     flask db upgrade
+
+   3. Generate the Road Network Graph:
+      The application needs a graph file for calculating routes. Run this script to generate it:
+
+   1     python generate_graph.py
+      This will download the road network for Manhattan and create a new_york.graphml file. It might take a few minutes.
+
+  Step 2: Run the Application
+
+  Now, start the Flask application:
+
+   1 python run.py
+  The application will be running at http://127.0.0.1:5000.
+
+  Step 3: Test the Functionalities
+
+  You can test the API endpoints using a tool like curl or Postman.
+
+  1. Register Users:
+
+   * Register an Admin User:
+
+   1 curl -X POST -H "Content-Type: application/json" -d '{"email": "admin@test.com", "password": "adminpassword", "role": "admin"}' http://127.0.0.1:5000/auth/register
+     
+   * Register an Employee User:
+
+   1 curl -X POST -H "Content-Type: application/json" -d '{"email": "employee@test.com", "password": "employeepassword"}' http://127.0.0.1:5000/auth/register
+
+  2. Log In and Get a Token:
+
+   * Log in as Admin to get a JWT token, which you'll need for authenticated requests.
+
+   1 curl -X POST -H "Content-Type: application/json" -d '{"email": "admin@test.com", "password": "adminpassword"}' http://127.0.0.1:5000/auth/login
+      # This will return an access_token. Copy it for the next steps.
+
+  3. Test Admin Functionalities:
+
+   * Create a Trip:
+      Replace <YOUR_TOKEN> with the access token you copied. You'll also need the public_id of the employee you created (you can get this from
+  the database or by modifying the registration response to return it).
+
+   1     curl -X POST -H "Authorization: Bearer <YOUR_TOKEN>" -H "Content-Type: application/json" -d '{"employee_public_id": 
+     "<EMPLOYEE_PUBLIC_ID>", "start_lat": 40.7128, "start_lon": -74.0060}' http://127.0.0.1:5000/admin/trips
+     
+   * Allocate a Cab:
+      This will find the best cab for the trip you just created (assuming the trip ID is 1).
+   1     curl -X POST -H "Authorization: Bearer <YOUR_TOKEN>" http://127.0.0.1:5000/admin/trips/1/allocate
+
+  4. View the Real-Time Map:
+
+   * Open your web browser and go to http://127.0.0.1:5000/admin/dashboard. You will need to be logged in as an admin.
+
+  5. Simulate Cab Location Updates:
+
+   * To see the real-time updates on the map, you can use a simple WebSocket client to send location updates to the server. You can use a tool
+     like websocat or write a simple Python script using the websocket-client library.
+
+      Connect to ws://127.0.0.1:5000/socket.io/ and send messages in this format:
+
+   1     {
+   2       "event": "update_location",
+   3       "data": {
+   4         "cab_id": 1,
+   5         "lat": 40.7138,
+   6         "lon": -74.0070
+   7       }
+   8     }
+      You should see the cab marker move on the map in your browser.

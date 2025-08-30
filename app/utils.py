@@ -7,7 +7,7 @@ from.extensions import cache
 # Time Complexity: O(E + V log V) where V is vertices (intersections) and E is edges (roads).
 # Space Complexity: O(V + E) to store the graph in memory. [1]
 
-GRAPH_FILE_PATH = "new_york.graphml"
+GRAPH_FILE_PATH = "iit_jodhpur.graphml"
 
 # This uses the "Caching" plus point to avoid reloading the large graph file from disk on every request. [1]
 @cache.memoize(timeout=3600) # Cache for 1 hour
@@ -31,8 +31,9 @@ def find_shortest_path_distance(graph, start_coords, end_coords):
 
     try:
         # Find the nearest network nodes to the given coordinates
-        start_node = ox.distance.nearest_nodes(graph, Y=start_coords, X=start_coords[1])
-        end_node = ox.distance.nearest_nodes(graph, Y=end_coords, X=end_coords[1])
+        # The correct usage is X=longitude, Y=latitude
+        start_node = ox.distance.nearest_nodes(graph, X=start_coords[1], Y=start_coords[0])
+        end_node = ox.distance.nearest_nodes(graph, X=end_coords[1], Y=end_coords[0])
 
         # Calculate the shortest path length using Dijkstra's algorithm
         distance_meters = nx.shortest_path_length(graph, source=start_node, target=end_node, weight='length')

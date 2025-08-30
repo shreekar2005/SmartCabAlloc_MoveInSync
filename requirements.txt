@@ -12,3 +12,5 @@ eventlet
 osmnx
 networkx
 bcrypt
+scikit-learn
+python-socketio

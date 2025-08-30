@@ -18,3 +18,6 @@ class Config:
     # For production scaling, a distributed cache like Redis or Memcached would be necessary.
     CACHE_TYPE = 'SimpleCache'
     CACHE_DEFAULT_TIMEOUT = 300
+
+    # This tells Flask-JWT-Extended to expect JWTs in cookies
+    JWT_TOKEN_LOCATION = ['cookies']

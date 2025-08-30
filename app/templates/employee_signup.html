@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Employee Sign Up</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f4; }
+        .container { width: 300px; margin: 100px auto; padding: 20px; background: #fff; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; }
+        input[type="email"], input[type="password"] { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 3px; border: 1px solid #ddd; box-sizing: border-box; }
+        input[type="submit"] { width: 100%; padding: 10px; background: #007bff; color: #fff; border: none; border-radius: 3px; cursor: pointer; }
+        .message { color: green; margin-bottom: 10px; text-align: center; }
+        .error { color: red; margin-bottom: 10px; text-align: center; }
+        .footer-links { text-align: center; margin-top: 15px; }
+        .footer-links a { color: #007bff; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Employee Sign Up</h2>
+        <form id="signup-form">
+            <input type="email" id="email" name="email" placeholder="Email" required>
+            <input type="password" id="password" name="password" placeholder="Password" required>
+            <input type="submit" value="Sign Up">
+        </form>
+        <div id="message" class="message"></div>
+        <div id="error-message" class="error"></div>
+        <div class="footer-links">
+            <a href="/auth/employee/login">Employee Login</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('signup-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const message = document.getElementById('message');
+            const errorMessage = document.getElementById('error-message');
+
+            const response = await fetch('/auth/employee/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password, role: 'employee' })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                message.textContent = data.message + " You can now log in.";
+                errorMessage.textContent = '';
+            } else {
+                errorMessage.textContent = data.message || 'Sign up failed!';
+                message.textContent = '';
+            }
+        });
+    </script>
+</body>
+</html>

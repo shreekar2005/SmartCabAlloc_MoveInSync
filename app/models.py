@@ -8,6 +8,8 @@ class User(db.Model):
     email = db.Column(db.String(100), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='employee') # 'admin' or 'employee'
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
     trips = db.relationship('Trip', backref='employee', lazy=True)
 
     def set_password(self, password):
