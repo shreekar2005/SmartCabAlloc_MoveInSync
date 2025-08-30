@@ -8,6 +8,15 @@ document.addEventListener('DOMContentLoaded', (event) => {
     let tripLine = null;
     let myTripId = null;
     let myCabId = null;
+    const otherCabMarkers = {}; // New: To store markers for other cabs on trip
+
+    // --- Initial check for user authentication ---
+    if (typeof userPublicId === 'undefined' || !userPublicId) {
+        console.log('User not authenticated, redirecting to login.');
+        window.location.href = '/auth/employee/login';
+        return; // Stop execution
+    }
+    console.log('User Public ID:', userPublicId);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -58,9 +67,11 @@ document.addEventListener('DOMContentLoaded', (event) => {
     // Draw other cabs on trip
     if (typeof onTripCabs !== 'undefined') {
         onTripCabs.forEach(cab => {
-            L.marker([cab.current_lat, cab.current_lon], { icon: icons.onTripOther })
-                .addTo(map)
-                .bindPopup(`Cab ID: ${cab.id}<br>Status: On Trip`);
+            if (cab.id !== myCabId) { // Don't draw if it's my allocated cab
+                otherCabMarkers[cab.id] = L.marker([cab.current_lat, cab.current_lon], { icon: icons.onTripOther })
+                    .addTo(map)
+                    .bindPopup(`Cab ID: ${cab.id}<br>Status: On Trip`);
+            }
         });
     }
 
@@ -136,11 +147,26 @@ document.addEventListener('DOMContentLoaded', (event) => {
     });
 
     socket.on('location_update', (data) => {
-        if (allocatedCabMarker && data.cab_id === myCabId) {
-            const cabLatLng = [data.lat, data.lon];
-            allocatedCabMarker.setLatLng(cabLatLng);
-            if (tripLine) {
-                tripLine.setLatLngs([myLocationMarker.getLatLng(), cabLatLng]);
+        const { cab_id, lat, lon, status } = data;
+        const cabLatLng = [lat, lon];
+
+        if (cab_id === myCabId) { // Update my allocated cab
+            if (allocatedCabMarker) {
+                allocatedCabMarker.setLatLng(cabLatLng);
+                if (tripLine) {
+                    tripLine.setLatLngs([myLocationMarker.getLatLng(), cabLatLng]);
+                }
+            }
+        } else { // Update other cabs on trip
+            const icon = icons.onTripOther; // Other cabs are always yellow
+            if (otherCabMarkers[cab_id]) {
+                otherCabMarkers[cab_id].setLatLng(cabLatLng).setIcon(icon);
+                otherCabMarkers[cab_id].getPopup().setContent(`Cab ID: ${cab_id}<br>Status: ${status}`);
+            } else {
+                // If a new cab on trip appears (e.g., from simulator), add it
+                otherCabMarkers[cab_id] = L.marker(cabLatLng, { icon: icon })
+                    .addTo(map)
+                    .bindPopup(`Cab ID: ${cab_id}<br>Status: ${status}`);
             }
         }
     });

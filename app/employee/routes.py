@@ -53,6 +53,8 @@ def employee_dashboard():
 @employee_bp.route('/request-trip', methods=['POST'])
 @jwt_required()
 def request_trip():
+
+    print("hihi")
     data = request.get_json()
     lat = data.get('lat')
     lon = data.get('lon')
