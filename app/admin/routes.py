@@ -1,8 +1,8 @@
 from flask import request, jsonify
-from. import admin_bp
-from..models import Trip, Cab, User
-from..extensions import db, socketio
-from..utils import load_road_network, find_shortest_path_distance
+from . import admin_bp
+from ..models import Trip, Cab, User
+from ..extensions import db, socketio
+from ..utils import load_road_network, find_shortest_path_distance
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask import render_template
 
@@ -10,6 +10,8 @@ def is_admin(public_id):
     user = User.query.filter_by(public_id=public_id).first()
     return user and user.role == 'admin'
 
+
+# MODIFIED FUNCTION
 @admin_bp.route('/dashboard')
 @jwt_required()
 def dashboard_view():
@@ -30,14 +32,18 @@ def dashboard_view():
     pending_trips_query = Trip.query.filter_by(status='requested').all()
     pending_trips = []
     for trip in pending_trips_query:
-        pending_trips.append({
-            'id': trip.id,
-            'employee_id': trip.employee_id,
-            'start_lat': trip.start_lat,
-            'start_lon': trip.start_lon
-        })
+        # Fetch the employee to get their public ID for consistency
+        employee = User.query.get(trip.employee_id)
+        if employee:
+            pending_trips.append({
+                'id': trip.id,
+                'employee_id': employee.public_id, # <-- CHANGED from trip.employee_id
+                'start_lat': trip.start_lat,
+                'start_lon': trip.start_lon
+            })
 
     return render_template('index.html', all_cabs=all_cabs, pending_trips=pending_trips)
+
 
 @admin_bp.route('/trips', methods=['GET','POST'])
 @jwt_required() 
@@ -59,6 +65,7 @@ def create_trip():
     db.session.add(new_trip)
     db.session.commit()
     return jsonify({"message": "Trip created", "trip_id": new_trip.id}), 201
+
 
 @admin_bp.route('/trips/<int:trip_id>/allocate', methods=['POST'])
 @jwt_required()
@@ -106,7 +113,7 @@ def allocate_cab(trip_id):
     employee_user = User.query.get(trip.employee_id) # Fetch the user object
     allocation_data = {
         'trip_id': trip.id,
-        'employee_id': employee_user.public_id, # Use public_id
+        'employee_id': employee_user.public_id, # This is already correct
         'employee_lat': trip.start_lat,
         'employee_lon': trip.start_lon,
         'cab_id': best_cab.id,

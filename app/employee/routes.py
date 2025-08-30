@@ -4,6 +4,7 @@ from..models import Cab, User, Trip
 from..extensions import db, socketio
 from..utils import load_road_network, find_shortest_path_distance
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from datetime import datetime
 
 @employee_bp.route('/dashboard')
 @jwt_required()
@@ -126,3 +127,46 @@ def get_nearby_engaged_cabs():
     nearby_cabs.sort(key=lambda x: x['distance_meters'])
 
     return jsonify(nearby_cabs), 200
+
+@employee_bp.route('/trips/<int:trip_id>/finish', methods=['POST'])
+@jwt_required()
+def finish_employee_trip(trip_id):
+    """
+    Endpoint for an employee to finish their own trip.
+    """
+    current_user_public_id = get_jwt_identity()
+    user = User.query.filter_by(public_id=current_user_public_id).first()
+    
+    trip = Trip.query.get_or_404(trip_id)
+
+    # Security check: Ensure the employee finishing the trip is the one who requested it
+    if trip.employee_id != user.id:
+        return jsonify({"message": "Forbidden: You are not authorized to modify this trip."}), 403
+
+    if trip.status != 'in_progress':
+        return jsonify({"message": f"Trip is not in progress. Current status: {trip.status}"}), 400
+
+    # --- THIS IS THE CORRECTED LINE ---
+    # Find the cab directly using the cab_id stored on the trip object.
+    # This matches your database schema.
+    allocated_cab = Cab.query.get(trip.cab_id)
+
+    # Update the trip
+    trip.status = 'completed'
+    trip.end_time = datetime.utcnow() # Make sure you have `from datetime import datetime` at the top
+
+    # Free up the cab
+    if allocated_cab:
+        allocated_cab.status = 'available'
+        
+        # Emit a real-time update that the cab is now available
+        socketio.emit('location_update', {
+            'cab_id': allocated_cab.id,
+            'lat': allocated_cab.current_lat,
+            'lon': allocated_cab.current_lon,
+            'status': 'available'
+        })
+
+    db.session.commit()
+
+    return jsonify({"message": "Trip finished successfully."}), 200

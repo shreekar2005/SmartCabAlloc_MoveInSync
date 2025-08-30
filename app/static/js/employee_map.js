@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     const map = L.map('map').setView([26.4715, 73.1134], 15);
     const statusMessage = document.getElementById('status-message');
     const requestTripBtn = document.getElementById('request-trip-btn');
+    const finishTripBtn = document.getElementById('finish-trip-btn'); // ADD THIS LINE
     
     let myLocationMarker = null;
     let allocatedCabMarker = null;
@@ -10,7 +11,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     let myCabId = null;
     const otherCabMarkers = {};
 
-    // --- NEW: Helper function to read a cookie by name ---
+    // --- Helper function to read a cookie by name ---
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -73,7 +74,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
     legend.addTo(map);
 
     // --- Initial Drawing ---
-    // Draw my location
     if (typeof userLocation !== 'undefined' && userLocation.lat && userLocation.lon) {
         myLocationMarker = L.marker([userLocation.lat, userLocation.lon], { icon: icons.myLocation })
             .addTo(map)
@@ -81,7 +81,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
         map.setView([userLocation.lat, userLocation.lon], 15);
     }
 
-    // Draw other cabs on trip
     if (typeof onTripCabs !== 'undefined') {
         onTripCabs.forEach(cab => {
             if (cab.id !== myCabId && cab.status == "on_trip") {
@@ -92,18 +91,21 @@ document.addEventListener('DOMContentLoaded', (event) => {
         });
     }
 
-    // Draw my allocated cab if any
+    // MODIFIED SECTION: Manage button visibility on page load
     if (typeof allocatedCab !== 'undefined' && allocatedCab) {
         myCabId = allocatedCab.id;
-        myTripId = allocatedCab.trip_id;
+        myTripId = allocatedCab.trip_id; // Make sure trip_id is passed from backend
         allocatedCabMarker = L.marker([allocatedCab.current_lat, allocatedCab.current_lon], { icon: icons.myCab })
             .addTo(map)
             .bindPopup(`My Cab<br>ID: ${allocatedCab.id}`);
         tripLine = L.polyline([myLocationMarker.getLatLng(), allocatedCabMarker.getLatLng()], { color: '#FF0000' }).addTo(map);
         statusMessage.textContent = `Cab ${myCabId} is on the way!`;
+
+        requestTripBtn.style.display = 'none';
+        finishTripBtn.style.display = 'block';
     }
 
-    // --- Request Trip Button (MODIFIED) ---
+    // --- Request Trip Button ---
     requestTripBtn.addEventListener('click', async () => {
         if (!myLocationMarker) {
             statusMessage.textContent = 'Error: My location not set.';
@@ -113,14 +115,11 @@ document.addEventListener('DOMContentLoaded', (event) => {
         requestTripBtn.disabled = true;
 
         try {
-            // Get the CSRF token from the cookie
             const csrfToken = getCookie('csrf_access_token');
-
             const response = await fetch('/employee/request-trip', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    // Add the token to the request headers
                     'X-CSRF-Token': csrfToken
                 },
                 credentials: 'include',
@@ -132,7 +131,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 myTripId = data.trip_id;
                 statusMessage.textContent = `Trip Requested (ID: ${myTripId}). Waiting for allocation.`;
             } else {
-                // Handle both 'message' and 'msg' for the error key from Flask
                 statusMessage.textContent = `Error: ${data.message || data.msg}`;
                 requestTripBtn.disabled = false;
             }
@@ -143,11 +141,63 @@ document.addEventListener('DOMContentLoaded', (event) => {
         }
     });
 
+    // ADD THIS ENTIRE BLOCK: Listener for the Finish Trip button
+    finishTripBtn.addEventListener('click', async () => {
+        if (!myTripId) {
+            alert('Error: No active trip ID found.');
+            return;
+        }
+        finishTripBtn.disabled = true;
+        finishTripBtn.textContent = 'Finishing...';
+        
+        try {
+            const csrfToken = getCookie('csrf_access_token');
+            const response = await fetch(`/employee/trips/${myTripId}/finish`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-Token': csrfToken
+                }
+            });
+
+            if (response.ok) {
+                statusMessage.textContent = 'Trip completed! You can now request a new trip.';
+                
+                // Reset UI to initial state
+                requestTripBtn.style.display = 'block';
+                requestTripBtn.disabled = false;
+                finishTripBtn.style.display = 'none';
+                finishTripBtn.disabled = false;
+                finishTripBtn.textContent = 'Finish My Trip';
+
+                // Clean up map
+                if (allocatedCabMarker) map.removeLayer(allocatedCabMarker);
+                if (tripLine) map.removeLayer(tripLine);
+
+                // Reset state variables
+                myTripId = null;
+                myCabId = null;
+                allocatedCabMarker = null;
+                tripLine = null;
+            } else {
+                const data = await response.json();
+                alert(`Error: ${data.message || 'Could not finish trip.'}`);
+                finishTripBtn.disabled = false;
+                finishTripBtn.textContent = 'Finish My Trip';
+            }
+        } catch (error) {
+            console.error('Finish trip failed:', error);
+            alert('An unexpected error occurred.');
+            finishTripBtn.disabled = false;
+            finishTripBtn.textContent = 'Finish My Trip';
+        }
+    });
+
     // --- WebSocket Event Handlers ---
     const socket = io.connect('http://' + document.domain + ':' + location.port);
 
     socket.on('connect', () => console.log('Connected to WebSocket for employee dashboard.'));
 
+    // MODIFIED SECTION: Handle button visibility on trip allocation
     socket.on('trip_allocated', (data) => {
         if (data.employee_id === userPublicId) {
             console.log('My trip has been allocated!:', data);
@@ -169,6 +219,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
             } else {
                 tripLine = L.polyline([myLocationMarker.getLatLng(), cabLatLng], { color: '#FF0000' }).addTo(map);
             }
+
+            requestTripBtn.style.display = 'none';
+            finishTripBtn.style.display = 'block';
         }
     });
 
