@@ -78,6 +78,7 @@ def allocate_cab(trip_id):
     graph = load_road_network()
     if not graph:
         return jsonify({"message": "Road network not available"}), 503
+    print("hiii")
 
     trip_start_coords = (trip.start_lat, trip.start_lon)
     
