@@ -21,7 +21,6 @@ def create_app(config_class=Config):
 
     # for "System Monitoring"
     # The dashboard will be available at /dashboard.
-    dashboard.bind(app)
 
     # for "Real-Time Location Data Integration" requirement
     # We pass the app instance to SocketIO after all other initializations.
@@ -37,6 +36,9 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(employee_bp, url_prefix='/employee')
 
+    dashboard.config.enable_telemetry = False # to save our time when monitoring
+    dashboard.config.BLUEPRINT_NAME = ['auth_bp', 'admin_bp', 'employee_bp', 'home_bp']
+    dashboard.bind(app)
 
     # A centralized handler for all HTTP exceptions.
     @app.errorhandler(HTTPException)
