@@ -8,7 +8,6 @@ file_path = "iit_jodhpur.graphml"
 print(f"Downloading road network for {place_name}...")
 
 # Download the road network graph
-# This can take a few minutes depending on the size of the area and your internet connection.
 graph = ox.graph_from_place(place_name, network_type=network_type)
 
 print("Saving the graph to a file...")

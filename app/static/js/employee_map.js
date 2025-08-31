@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     let myCabId = null;
     const otherCabMarkers = {};
 
-    // --- Helper function to read a cookie by name ---
+    
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -28,11 +28,11 @@ document.addEventListener('DOMContentLoaded', (event) => {
         return cookieValue;
     }
 
-    // --- Initial check for user authentication ---
+   
     if (typeof userPublicId === 'undefined' || !userPublicId) {
         console.log('User not authenticated, redirecting to login.');
         window.location.href = '/auth/employee/login';
-        return; // Stop execution
+        return; 
     }
     console.log('User Public ID:', userPublicId);
 
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
         myCab: createIcon('red')
     };
 
-    // --- Map Legend ---
+    // Map Legend 
     const legend = L.control({ position: 'bottomright' });
     legend.onAdd = function (map) {
         const div = L.DomUtil.create('div', 'info legend');
@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     };
     legend.addTo(map);
 
-    // --- Initial Drawing ---
+    // Initial Drawing 
     if (typeof userLocation !== 'undefined' && userLocation.lat && userLocation.lon) {
         myLocationMarker = L.marker([userLocation.lat, userLocation.lon], { icon: icons.myLocation })
             .addTo(map)
@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
         });
     }
 
-    // MODIFIED SECTION: Manage button visibility on page load
+   
     if (typeof allocatedCab !== 'undefined' && allocatedCab) {
         myCabId = allocatedCab.id;
         myTripId = allocatedCab.trip_id; // Make sure trip_id is passed from backend
@@ -105,7 +105,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
         finishTripBtn.style.display = 'block';
     }
 
-    // --- Request Trip Button ---
+    //Request Trip Button
     requestTripBtn.addEventListener('click', async () => {
         if (!myLocationMarker) {
             statusMessage.textContent = 'Error: My location not set.';
@@ -161,18 +161,16 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
             if (response.ok) {
                 statusMessage.textContent = 'Trip completed! You can now request a new trip.';
-                
+        
                 // Reset UI to initial state
                 requestTripBtn.style.display = 'block';
                 requestTripBtn.disabled = false;
                 finishTripBtn.style.display = 'none';
                 finishTripBtn.disabled = false;
                 finishTripBtn.textContent = 'Finish My Trip';
-
                 // Clean up map
                 if (allocatedCabMarker) map.removeLayer(allocatedCabMarker);
                 if (tripLine) map.removeLayer(tripLine);
-
                 // Reset state variables
                 myTripId = null;
                 myCabId = null;
@@ -192,12 +190,12 @@ document.addEventListener('DOMContentLoaded', (event) => {
         }
     });
 
-    // --- WebSocket Event Handlers ---
+    // WebSocket Event Handlers 
     const socket = io.connect('http://' + document.domain + ':' + location.port);
 
     socket.on('connect', () => console.log('Connected to WebSocket for employee dashboard.'));
 
-    // MODIFIED SECTION: Handle button visibility on trip allocation
+   
     socket.on('trip_allocated', (data) => {
         if (data.employee_id === userPublicId) {
             console.log('My trip has been allocated!:', data);

@@ -19,10 +19,7 @@ def create_app(config_class=Config):
     cache.init_app(app)
     cors.init_app(app)
 
-    # for "System Monitoring"
-    # The dashboard will be available at /dashboard.
-
-    # for "Real-Time Location Data Integration" requirement
+    # for "Real-Time Location Data Integration"
     # We pass the app instance to SocketIO after all other initializations.
     socketio.init_app(app, cors_allowed_origins="*")
 
@@ -36,6 +33,7 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(employee_bp, url_prefix='/employee')
 
+    # for "System Monitoring"
     dashboard.config.enable_telemetry = False # to save our time when monitoring
     # dashboard.config.BLUEPRINT_NAME = ['auth_bp', 'admin_bp', 'employee_bp', 'home_bp']
     dashboard.bind(app)
@@ -55,7 +53,6 @@ def create_app(config_class=Config):
     #generic handler for any other exceptions.
     @app.errorhandler(Exception)
     def handle_generic_exception(e):
-        # for unhandled errors, ensuring a JSON response.
         tb = traceback.format_exc()
         app.logger.error(f"Unhandled exception: {str(e)}\n{tb}")
         response = {

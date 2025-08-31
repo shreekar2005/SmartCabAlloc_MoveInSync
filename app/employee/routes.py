@@ -98,7 +98,7 @@ def get_nearby_engaged_cabs():
     if lat is None or lon is None:
         return jsonify({"message": "Latitude and longitude are required parameters"}), 400
 
-    # This logic specifically implements the requirement to show ONLY engaged cabs. [1]
+    # This logic specifically implements the requirement to show ONLY engaged cabs
     engaged_cabs = Cab.query.filter_by(status='on_trip').all()
     
     graph = load_road_network()
@@ -131,9 +131,6 @@ def get_nearby_engaged_cabs():
 @employee_bp.route('/trips/<int:trip_id>/finish', methods=['POST'])
 @jwt_required()
 def finish_employee_trip(trip_id):
-    """
-    Endpoint for an employee to finish their own trip.
-    """
     current_user_public_id = get_jwt_identity()
     user = User.query.filter_by(public_id=current_user_public_id).first()
     
@@ -146,14 +143,12 @@ def finish_employee_trip(trip_id):
     if trip.status != 'in_progress':
         return jsonify({"message": f"Trip is not in progress. Current status: {trip.status}"}), 400
 
-    # --- THIS IS THE CORRECTED LINE ---
-    # Find the cab directly using the cab_id stored on the trip object.
-    # This matches your database schema.
+    
     allocated_cab = Cab.query.get(trip.cab_id)
 
     # Update the trip
     trip.status = 'completed'
-    trip.end_time = datetime.utcnow() # Make sure you have `from datetime import datetime` at the top
+    trip.end_time = datetime.utcnow()
 
     # Free up the cab
     if allocated_cab:

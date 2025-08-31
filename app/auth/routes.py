@@ -6,11 +6,10 @@ from..extensions import db
 from flask_jwt_extended import create_access_token, set_access_cookies
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-# --- Login Routes ---
+#Login Routes
 
 @auth_bp.route('/login', methods=['POST'])
 def login_post():
-    """Handles the actual login logic for both admins and employees."""
     data = request.get_json()
     if not data or not data.get('email') or not data.get('password'):
         return jsonify({"message": "Email and password are required"}), 400
@@ -33,7 +32,7 @@ def admin_login_page():
 def employee_login_page():
     return render_template('employee_login.html')
 
-# --- Signup Routes ---
+#Signup Routes
 
 BASE_LAT = 26.4715  # IIT Jodhpur Latitude
 BASE_LON = 73.1134  # IIT Jodhpur Longitude
@@ -86,7 +85,6 @@ def employee_signup():
 
     return jsonify({"message": "Employee user registered successfully"}), 201
 
-# --- Redirect for old /login route ---
 @auth_bp.route('/login', methods=['GET'])
 def login_page_redirect():
     # Redirect to the employee login page by default

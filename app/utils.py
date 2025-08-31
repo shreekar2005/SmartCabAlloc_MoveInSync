@@ -2,17 +2,16 @@ import osmnx as ox
 import networkx as nx
 from.extensions import cache
 
-# This file addresses the "Cost Estimation - Time and Space" plus point.
-# The core algorithm is Dijkstra's, which is efficient for finding the shortest path.
-# Time Complexity: O(E + V log V) where V is vertices (intersections) and E is edges (roads).
-# Space Complexity: O(V + E) to store the graph in memory. [1]
+# This file addresses the "Cost Estimation - Time and Space"
+# using Dijkstra's, which is efficient for finding the shortest path.
+# Time Complexity: O((E + V) log V) where V is vertices (intersections) and E is edges (roads).
+# Space Complexity: O(V + E) to store the graph in memory.
 
 GRAPH_FILE_PATH = "iit_jodhpur.graphml"
 
-# This uses the "Caching" plus point to avoid reloading the large graph file from disk on every request. [1]
+# This uses the "Caching" to avoid reloading the large graph file from disk on every request.
 @cache.memoize(timeout=3600) # Cache for 1 hour
 def load_road_network():
-    """Loads the road network graph from a file."""
     try:
         graph = ox.load_graphml(GRAPH_FILE_PATH)
         return graph
@@ -22,10 +21,6 @@ def load_road_network():
         return None
 
 def find_shortest_path_distance(graph, start_coords, end_coords):
-    """
-    Calculates the shortest path distance in meters between two lat/lon coordinates
-    using Dijkstra's algorithm on the road network.
-    """
     if not graph:
         return float('inf')
 

@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
     const cabMarkers = {};
     const pendingTripsList = document.getElementById('trip-requests-ul');
 
-    // --- NEW: Helper function to read a cookie by name ---
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -24,7 +23,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
         return cookieValue;
     }
 
-    // --- Custom Icons ---
     const createIcon = (color) => L.icon({
         iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`,
         shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -39,7 +37,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
         on_trip: createIcon('yellow')
     };
 
-    // --- Map Legend ---
     const legend = L.control({ position: 'bottomright' });
     legend.onAdd = function (map) {
         const div = L.DomUtil.create('div', 'info legend');
@@ -56,7 +53,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
     };
     legend.addTo(map);
 
-    // --- Helper to add a pending trip to the list (MODIFIED) ---
     function addPendingTripToList(trip) {
         const listItem = document.createElement('li');
         listItem.id = `trip-${trip.id}`;
@@ -102,7 +98,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
         });
     }
 
-    // --- Initial Drawing ---
     if (typeof allCabs !== 'undefined') {
         allCabs.forEach(cab => {
             const icon = cab.status === 'available' ? icons.available : icons.on_trip;
@@ -118,7 +113,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
         });
     }
 
-    // --- WebSocket for Real-Time Updates ---
+    // WebSocket for Real-Time Updates
     const socket = io.connect('http://' + document.domain + ':' + location.port);
 
     socket.on('connect', () => {

@@ -11,7 +11,6 @@ def is_admin(public_id):
     return user and user.role == 'admin'
 
 
-# MODIFIED FUNCTION
 @admin_bp.route('/dashboard')
 @jwt_required()
 def dashboard_view():
@@ -37,7 +36,7 @@ def dashboard_view():
         if employee:
             pending_trips.append({
                 'id': trip.id,
-                'employee_id': employee.public_id, # <-- CHANGED from trip.employee_id
+                'employee_id': employee.public_id, 
                 'start_lat': trip.start_lat,
                 'start_lon': trip.start_lon
             })
@@ -103,17 +102,17 @@ def allocate_cab(trip_id):
     if not best_cab:
         return jsonify({"message": "Could not find a suitable cab"}), 404
 
-    # --- Assign the cab and update statuses ---
+    # Assign the cab and update statuses
     trip.cab_id = best_cab.id
     trip.status = 'in_progress'
     best_cab.status = 'on_trip'
     db.session.commit()
 
-    # --- Notify dashboards in real-time ---
+    # Notify dashboards in real-time
     employee_user = User.query.get(trip.employee_id) # Fetch the user object
     allocation_data = {
         'trip_id': trip.id,
-        'employee_id': employee_user.public_id, # This is already correct
+        'employee_id': employee_user.public_id,
         'employee_lat': trip.start_lat,
         'employee_lon': trip.start_lon,
         'cab_id': best_cab.id,
