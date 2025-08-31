@@ -80,3 +80,58 @@ Step 1: Set Up the Environment
    7       }
    8     }
       You should see the cab marker move on the map in your browser.
+
+
+##################################################################################################################
+
+Step 1: Reset Database (Crucial for New User Locations)
+
+  Since we added location fields to the User model, and new users will get default locations, it's best to start with a clean database.
+
+   1. Stop all running servers: Stop both python run.py and python simulate_cabs.py.
+   2. Delete the database file:
+   1     rm instance/app.db
+   3. Re-create the database schema:
+   1     export FLASK_APP=run.py
+   2     flask db upgrade
+
+  Step 2: Restart Servers
+
+   1. Start the main application:
+   1     python run.py
+   2. In a new terminal, start the cab simulator:
+   1     python simulate_cabs.py
+
+  Step 3: Register New Users
+
+   * Register a new Admin: Go to http://127.0.0.1:5000/auth/admin/signup and create a new admin user (e.g., newadmin@test.com, password).
+   * Register a new Employee: Go to http://127.0.0.1:5000/auth/employee/signup and create a new employee user (e.g., newemployee@test.com,
+     password).
+       * Note: These new users will automatically have a default location near IIT Jodhpur.
+
+  Step 4: Employee Requests a Trip
+
+   1. Log in as the new Employee: Go to http://127.0.0.1:5000/auth/employee/login and log in with your new employee credentials.
+   2. Observe Employee Dashboard: You should see your own location marked with a blue marker. You might also see other cabs (yellow markers) if
+      the simulator has created some 'on_trip' cabs.
+   3. Request a Trip: Click the "Request Trip at My Location" button.
+       * The status message should update to "Trip Requested (ID: ...). Waiting for allocation."
+
+  Step 5: Admin Allocates the Trip
+
+   1. Log in as the new Admin: In a separate browser or incognito window, go to http://127.0.0.1:5000/auth/admin/login and log in with your new
+      admin credentials.
+   2. Observe Admin Dashboard:
+       * You will see all cabs: green for available, yellow for on-trip.
+       * On the left side, you should see the new pending trip request from the employee you just created.
+   3. Allocate Cab: Click the "Allocate Cab" button next to the pending trip request in the list.
+
+  Step 6: Observe Real-Time Updates
+
+   * On the Admin Dashboard: The cab that was allocated will change from a green marker to a yellow marker. The trip request will disappear from
+     the pending list.
+   * On the Employee Dashboard: The allocated cab will appear as a red marker moving towards the employee's location, and a line will connect
+     them. The status message will update to "Cab X is on the way!".
+
+  This completes the implementation of all your requested features.
+
