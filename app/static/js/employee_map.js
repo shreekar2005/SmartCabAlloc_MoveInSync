@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
         }
     });
 
-    // ADD THIS ENTIRE BLOCK: Listener for the Finish Trip button
+    // Listener for the Finish Trip button
     finishTripBtn.addEventListener('click', async () => {
         if (!myTripId) {
             alert('Error: No active trip ID found.');
