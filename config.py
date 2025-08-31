@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 # This file addresses the "Trade-offs" evaluation criteria.
 # Trade-off: Using a simple configuration file is easy for development but for production, a more secure method like environment variables or a secret management service.
@@ -20,3 +21,6 @@ class Config:
 
     # This tells Flask-JWT-Extended to expect JWTs in cookies
     JWT_TOKEN_LOCATION = ['cookies']
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=30)
+    # Default is 30 days.
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=90)
