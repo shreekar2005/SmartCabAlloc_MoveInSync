@@ -37,7 +37,7 @@ def create_app(config_class=Config):
     app.register_blueprint(employee_bp, url_prefix='/employee')
 
     dashboard.config.enable_telemetry = False # to save our time when monitoring
-    dashboard.config.BLUEPRINT_NAME = ['auth_bp', 'admin_bp', 'employee_bp', 'home_bp']
+    # dashboard.config.BLUEPRINT_NAME = ['auth_bp', 'admin_bp', 'employee_bp', 'home_bp']
     dashboard.bind(app)
 
     # A centralized handler for all HTTP exceptions.
