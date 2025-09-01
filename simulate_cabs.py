@@ -89,7 +89,13 @@ if __name__ == "__main__":
                             end_node = ox.distance.nearest_nodes(graph, cab.destination_longitude, cab.destination_latitude)
                             try:
                                 route = ox.shortest_path(graph, start_node, end_node, weight='length')
-                                cab_routes[cab.id] = {'route': route, 'index': 0}
+                                # Ensure the route is valid before assigning
+                                if route:
+                                    cab_routes[cab.id] = {'route': route, 'index': 0}
+                                else:
+                                    print(f"No path found for Cab {cab.id} (empty route). It will wait.")
+                                    cab_routes[cab.id] = {'route': [], 'index': 0} # Prevent recalculating
+                                    continue
                             except networkx.NetworkXNoPath:
                                 print(f"No path found for Cab {cab.id}. It will wait.")
                                 cab_routes[cab.id] = {'route': [], 'index': 0} # Prevent recalculating
@@ -97,7 +103,8 @@ if __name__ == "__main__":
 
                         # Move cab one step along its calculated route
                         state = cab_routes.get(cab.id)
-                        if state and state['index'] < len(state['route']):
+                        # Safely check for route existence and index
+                        if state and state.get('route') and state['index'] < len(state['route']):
                             next_node = state['route'][state['index']]
                             cab.current_lat = graph.nodes[next_node]['y']
                             cab.current_lon = graph.nodes[next_node]['x']

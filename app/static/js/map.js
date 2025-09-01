@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
     }).addTo(map);
 
     const cabMarkers = {};
+    const employeeMarkers = {};
+    const tripLines = {};
     const pendingTripsList = document.getElementById('trip-requests-ul');
 
     function getCookie(name) {
@@ -34,7 +36,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
     const icons = {
         available: createIcon('green'),
-        on_trip: createIcon('yellow')
+        on_trip: createIcon('yellow'),
+        employee: createIcon('blue')
     };
 
     const legend = L.control({ position: 'bottomright' });
@@ -42,7 +45,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
         const div = L.DomUtil.create('div', 'info legend');
         const items = {
             'Available Cab': 'green',
-            'Cab on Trip': 'yellow'
+            'Cab on Trip': 'yellow',
+            'Employee': 'blue'
         };
         let labels = '<strong>Legend</strong><br>';
         for (const item in items) {
@@ -110,6 +114,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
     if (typeof pendingTrips !== 'undefined') {
         pendingTrips.forEach(trip => {
             addPendingTripToList(trip);
+            employeeMarkers[trip.id] = L.marker([trip.start_lat, trip.start_lon], { icon: icons.employee })
+                .addTo(map)
+                .bindPopup(`<b>Trip ID:</b> ${trip.id}<br><b>Employee ID:</b> ${trip.employee_id}`);
         });
     }
 
@@ -132,25 +139,57 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 .addTo(map)
                 .bindPopup(`<b>Cab ID:</b> ${cab_id}<br><b>Status:</b> ${status}`);
         }
+
+        // Update polyline if cab is on a trip
+        for (const tripId in tripLines) {
+            if (tripLines[tripId].cab_id === cab_id) {
+                const newLatLngs = [tripLines[tripId].getLatLngs()[0], [lat, lon]];
+                tripLines[tripId].setLatLngs(newLatLngs);
+            }
+        }
     });
 
     socket.on('new_trip_request', (data) => {
         console.log('New trip request received:', data);
         addPendingTripToList(data);
+        employeeMarkers[data.trip_id] = L.marker([data.employee_lat, data.employee_lon], { icon: icons.employee })
+            .addTo(map)
+            .bindPopup(`<b>Trip ID:</b> ${data.trip_id}<br><b>Employee ID:</b> ${data.employee_id}`);
     });
 
     socket.on('trip_allocated', (data) => {
         console.log('Trip allocated event received:', data);
-        const { trip_id, cab_id } = data;
+        const { trip_id, cab_id, employee_lat, employee_lon, cab_lat, cab_lon } = data;
 
         const listItem = document.getElementById(`trip-${trip_id}`);
         if (listItem) {
             listItem.remove();
         }
 
+        if (employeeMarkers[trip_id]) {
+            map.removeLayer(employeeMarkers[trip_id]);
+            delete employeeMarkers[trip_id];
+        }
+
         if (cabMarkers[cab_id]) {
             cabMarkers[cab_id].setIcon(icons.on_trip);
             cabMarkers[cab_id].getPopup().setContent(`<b>Cab ID:</b> ${cab_id}<br><b>Status:</b> On Trip (Allocated)`);
+        }
+
+        const latlngs = [
+            [employee_lat, employee_lon],
+            [cab_lat, cab_lon]
+        ];
+        tripLines[trip_id] = L.polyline(latlngs, { color: 'blue' }).addTo(map);
+        tripLines[trip_id].cab_id = cab_id;
+    });
+
+    socket.on('trip_finished', (data) => {
+        console.log('Trip finished event received:', data);
+        const { trip_id } = data;
+        if (tripLines[trip_id]) {
+            map.removeLayer(tripLines[trip_id]);
+            delete tripLines[trip_id];
         }
     });
 });

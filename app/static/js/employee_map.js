@@ -3,7 +3,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
     const statusMessage = document.getElementById('status-message');
     const requestTripBtn = document.getElementById('request-trip-btn');
     const updateLocationBtn = document.getElementById('update-location-btn');
-    const finishTripBtn = document.getElementById('finish-trip-btn'); // ADD THIS LINE
+    const finishTripBtn = document.getElementById('finish-trip-btn');
+    const reRequestTripBtn = document.getElementById('re-request-trip-btn');
+    const cancelledTripIdInput = document.getElementById('cancelled-trip-id');
     
     let myLocationMarker = null;
     let allocatedCabMarker = null;
@@ -141,12 +143,57 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 statusMessage.textContent = `Trip Requested (ID: ${myTripId}). Waiting for allocation.`;
             } else {
                 statusMessage.textContent = `Error: ${data.message || data.msg}`;
-                requestTripBtn.disabled = false;
+                if (data.status === 'cancelled') {
+                    cancelledTripIdInput.value = data.trip_id;
+                    reRequestTripBtn.style.display = 'block';
+                    requestTripBtn.style.display = 'none';
+                } else {
+                    requestTripBtn.disabled = false;
+                }
             }
         } catch (error) {
             statusMessage.textContent = 'An unexpected error occurred.';
             console.error('Request failed:', error);
             requestTripBtn.disabled = false;
+        }
+    });
+
+    reRequestTripBtn.addEventListener('click', async () => {
+        const tripId = cancelledTripIdInput.value;
+        if (!tripId) {
+            alert('Error: No cancelled trip ID found.');
+            return;
+        }
+        statusMessage.textContent = 'Re-requesting trip...';
+        reRequestTripBtn.disabled = true;
+
+        try {
+            const csrfToken = getCookie('csrf_access_token');
+            const response = await fetch(`/employee/re-request-trip/${tripId}`,
+             {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                credentials: 'include',
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                myTripId = data.trip_id;
+                statusMessage.textContent = `Trip Requested (ID: ${myTripId}). Waiting for allocation.`;
+                reRequestTripBtn.style.display = 'none';
+                requestTripBtn.style.display = 'block';
+                requestTripBtn.disabled = true;
+            } else {
+                statusMessage.textContent = `Error: ${data.message || data.msg}`;
+                reRequestTripBtn.disabled = false;
+            }
+        } catch (error) {
+            statusMessage.textContent = 'An unexpected error occurred.';
+            console.error('Request failed:', error);
+            reRequestTripBtn.disabled = false;
         }
     });
 

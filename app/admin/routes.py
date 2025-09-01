@@ -2,10 +2,9 @@ from flask import request, jsonify
 from . import admin_bp
 from ..models import Trip, Cab, User
 from ..extensions import db, socketio
-from ..utils import load_road_network, find_shortest_path_distance
+from ..utils import allocate_cab_to_trip
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask import render_template
-from math import radians, cos, sin, asin, sqrt
 
 def is_admin(public_id):
     user = User.query.filter_by(public_id=public_id).first()
@@ -66,30 +65,6 @@ def create_trip():
     db.session.commit()
     return jsonify({"message": "Trip created", "trip_id": new_trip.id}), 201
 
-
-
-
-def haversine_distance(lat1, lon1, lat2, lon2):
-    """
-    Calculate the great-circle distance in kilometers between two points 
-    on the earth (specified in decimal degrees).
-    """
-    # Earth's radius in kilometers
-    R = 6371.0
-
-    # Convert decimal degrees to radians
-    rlat1, rlon1, rlat2, rlon2 = map(radians, [lat1, lon1, lat2, lon2])
-
-    # Haversine formula
-    dlon = rlon2 - rlon1
-    dlat = rlat2 - rlat1
-    a = sin(dlat / 2)**2 + cos(rlat1) * cos(rlat2) * sin(dlon / 2)**2
-    c = 2 * asin(sqrt(a))
-    
-    distance = R * c
-    return distance
-# --- Add the haversine_distance function here (from the section above) ---
-
 @admin_bp.route('/trips/<int:trip_id>/allocate', methods=['POST'])
 @jwt_required()
 def allocate_cab(trip_id):
@@ -101,45 +76,10 @@ def allocate_cab(trip_id):
     if trip.status != 'requested':
         return jsonify({"message": "Trip is not in 'requested' state"}), 400
 
-    # Get all available cabs first
-    all_available_cabs = Cab.query.filter_by(status='available').all()
-    if not all_available_cabs:
-        return jsonify({"message": "No available cabs found anywhere"}), 404
-    
-    trip_start_coords = (trip.start_lat, trip.start_lon)
-    nearby_cabs = []
-    SEARCH_RADIUS_KM = 5.0
-
-    # Filter for cabs within the 5km radius
-    for cab in all_available_cabs:
-        distance_as_crow_flies = haversine_distance(
-            trip_start_coords[0], trip_start_coords[1],
-            cab.current_lat, cab.current_lon
-        )
-        if distance_as_crow_flies <= SEARCH_RADIUS_KM:
-            nearby_cabs.append(cab)
-
-    if not nearby_cabs:
-        return jsonify({"message": f"No available cabs found within a {SEARCH_RADIUS_KM} km radius"}), 404
-
-    graph = load_road_network()
-    if not graph:
-        return jsonify({"message": "Road network not available"}), 503
-    
-    best_cab = None
-    min_distance = float('inf')
-
-    for cab in nearby_cabs: 
-        cab_coords = (cab.current_lat, cab.current_lon)
-        # This expensive calculation is now only done for cabs that are already close
-        distance = find_shortest_path_distance(graph, trip_start_coords, cab_coords)
-        
-        if distance < min_distance:
-            min_distance = distance
-            best_cab = cab
+    best_cab, message = allocate_cab_to_trip(trip)
 
     if not best_cab:
-        return jsonify({"message": "Could not find a suitable cab with a viable route"}), 404
+        return jsonify({"message": message}), 404
 
     # Assign the cab and update statuses
     trip.cab_id = best_cab.id
