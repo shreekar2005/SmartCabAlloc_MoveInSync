@@ -145,6 +145,11 @@ def allocate_cab(trip_id):
     trip.cab_id = best_cab.id
     trip.status = 'in_progress'
     best_cab.status = 'on_trip'
+
+    employee_user = User.query.get(trip.employee_id)
+    employee_user.current_trip_status = 'in_trip'
+    employee_user.current_trip_id = trip.id
+
     db.session.commit()
 
     # Notify dashboards in real-time

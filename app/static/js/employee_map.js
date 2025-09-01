@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     const map = L.map('map').setView([26.4715, 73.1134], 15);
     const statusMessage = document.getElementById('status-message');
     const requestTripBtn = document.getElementById('request-trip-btn');
+    const updateLocationBtn = document.getElementById('update-location-btn');
     const finishTripBtn = document.getElementById('finish-trip-btn'); // ADD THIS LINE
     
     let myLocationMarker = null;
@@ -105,6 +106,14 @@ document.addEventListener('DOMContentLoaded', (event) => {
         finishTripBtn.style.display = 'block';
     }
 
+    map.on('click', function(e) {
+        if (myLocationMarker) {
+            myLocationMarker.setLatLng(e.latlng);
+        } else {
+            myLocationMarker = L.marker(e.latlng, { icon: icons.myLocation }).addTo(map);
+        }
+    });
+
     //Request Trip Button
     requestTripBtn.addEventListener('click', async () => {
         if (!myLocationMarker) {
@@ -141,6 +150,35 @@ document.addEventListener('DOMContentLoaded', (event) => {
         }
     });
 
+    updateLocationBtn.addEventListener('click', async () => {
+        if (!myLocationMarker) {
+            alert('Error: Please click on the map to set your location first.');
+            return;
+        }
+        const latlng = myLocationMarker.getLatLng();
+        try {
+            const csrfToken = getCookie('csrf_access_token');
+            const response = await fetch('/employee/update-location', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                credentials: 'include',
+                body: JSON.stringify({ lat: latlng.lat, lon: latlng.lng })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                statusMessage.textContent = 'Location updated successfully!';
+            } else {
+                statusMessage.textContent = `Error: ${data.message || data.msg}`;
+            }
+        } catch (error) {
+            statusMessage.textContent = 'An unexpected error occurred while updating location.';
+            console.error('Update location failed:', error);
+        }
+    });
+
     // Listener for the Finish Trip button
     finishTripBtn.addEventListener('click', async () => {
         if (!myTripId) {
@@ -152,7 +190,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
         
         try {
             const csrfToken = getCookie('csrf_access_token');
-            const response = await fetch(`/employee/trips/${myTripId}/finish`, {
+            const response = await fetch(`/employee/trips/finish`, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-Token': csrfToken

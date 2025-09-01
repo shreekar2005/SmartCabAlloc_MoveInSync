@@ -30,18 +30,19 @@ def employee_dashboard():
 
     # Fetch the cab allocated to this specific employee, if any
     allocated_cab = None
-    current_trip = Trip.query.filter_by(employee_id=user.id, status='in_progress').first()
-    if current_trip and current_trip.cab_id:
-        cab = Cab.query.get(current_trip.cab_id)
-        if cab:
-            allocated_cab = {
-                'id': cab.id,
-                'driver_name': cab.driver_name,
-                'license_plate': cab.license_plate,
-                'current_lat': cab.current_lat,
-                'current_lon': cab.current_lon,
-                'status': cab.status
-            }
+    if user.current_trip_id:
+        current_trip = Trip.query.get(user.current_trip_id)
+        if current_trip and current_trip.status == 'in_progress' and current_trip.cab_id:
+            cab = Cab.query.get(current_trip.cab_id)
+            if cab:
+                allocated_cab = {
+                    'id': cab.id,
+                    'driver_name': cab.driver_name,
+                    'license_plate': cab.license_plate,
+                    'current_lat': cab.current_lat,
+                    'current_lon': cab.current_lon,
+                    'status': cab.status
+                }
 
     return render_template(
         'employee_dashboard.html',
@@ -128,13 +129,38 @@ def get_nearby_engaged_cabs():
 
     return jsonify(nearby_cabs), 200
 
-@employee_bp.route('/trips/<int:trip_id>/finish', methods=['POST'])
+@employee_bp.route('/update-location', methods=['POST'])
 @jwt_required()
-def finish_employee_trip(trip_id):
+def update_location():
+    data = request.get_json()
+    lat = data.get('lat')
+    lon = data.get('lon')
+
+    if not lat or not lon:
+        return jsonify({"message": "Latitude and longitude are required"}), 400
+
     current_user_public_id = get_jwt_identity()
     user = User.query.filter_by(public_id=current_user_public_id).first()
-    
-    trip = Trip.query.get_or_404(trip_id)
+
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
+    user.latitude = lat
+    user.longitude = lon
+    db.session.commit()
+
+    return jsonify({"message": "Location updated successfully"}), 200
+
+@employee_bp.route('/trips/finish', methods=['POST'])
+@jwt_required()
+def finish_employee_trip():
+    current_user_public_id = get_jwt_identity()
+    user = User.query.filter_by(public_id=current_user_public_id).first()
+
+    if not user or not user.current_trip_id:
+        return jsonify({"message": "No active trip found for this user."}), 404
+
+    trip = Trip.query.get_or_404(user.current_trip_id)
 
     # Security check: Ensure the employee finishing the trip is the one who requested it
     if trip.employee_id != user.id:
@@ -143,7 +169,6 @@ def finish_employee_trip(trip_id):
     if trip.status != 'in_progress':
         return jsonify({"message": f"Trip is not in progress. Current status: {trip.status}"}), 400
 
-    
     allocated_cab = Cab.query.get(trip.cab_id)
 
     # Update the trip
@@ -153,7 +178,7 @@ def finish_employee_trip(trip_id):
     # Free up the cab
     if allocated_cab:
         allocated_cab.status = 'available'
-        
+
         # Emit a real-time update that the cab is now available
         socketio.emit('location_update', {
             'cab_id': allocated_cab.id,
@@ -161,6 +186,10 @@ def finish_employee_trip(trip_id):
             'lon': allocated_cab.current_lon,
             'status': 'available'
         })
+
+    # Update user's trip status
+    user.current_trip_status = 'not_in_trip'
+    user.current_trip_id = None
 
     db.session.commit()
 
