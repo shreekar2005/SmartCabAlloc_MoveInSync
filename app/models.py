@@ -10,9 +10,9 @@ class User(db.Model):
     role = db.Column(db.String(20), nullable=False, default='employee') # 'admin' or 'employee'
     latitude = db.Column(db.Float, nullable=True)
     longitude = db.Column(db.Float, nullable=True)
-    current_trip_status = db.Column(db.String(20), nullable=True)
+    current_trip_status = db.Column(db.String(20), nullable=True, default='not_in_trip') #not_in_trip or in_trip
     current_trip_id = db.Column(db.Integer, nullable=True)
-    trips = db.relationship('Trip', backref='employee', lazy=True)
+    # trips = db.relationship('Trip', backref='employee', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

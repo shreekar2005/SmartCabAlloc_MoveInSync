@@ -30,9 +30,11 @@ def employee_dashboard():
 
     # Fetch the cab allocated to this specific employee, if any
     allocated_cab = None
+    current_trip_id = None
     if user.current_trip_id:
         current_trip = Trip.query.get(user.current_trip_id)
         if current_trip and current_trip.status == 'in_progress' and current_trip.cab_id:
+            current_trip_id = current_trip.id
             cab = Cab.query.get(current_trip.cab_id)
             if cab:
                 allocated_cab = {
@@ -49,7 +51,8 @@ def employee_dashboard():
         user_public_id=user.public_id,
         user_location={'lat': user.latitude, 'lon': user.longitude},
         on_trip_cabs=on_trip_cabs,
-        allocated_cab=allocated_cab
+        allocated_cab=allocated_cab,
+        current_trip_id=current_trip_id
     )
 
 @employee_bp.route('/request-trip', methods=['POST'])

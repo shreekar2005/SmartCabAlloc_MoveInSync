@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     let myLocationMarker = null;
     let allocatedCabMarker = null;
     let tripLine = null;
-    let myTripId = null;
+    let myTripId = currentTripId;
     let myCabId = null;
     const otherCabMarkers = {};
 
