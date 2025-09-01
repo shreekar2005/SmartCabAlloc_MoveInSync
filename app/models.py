@@ -26,6 +26,8 @@ class Cab(db.Model):
     license_plate = db.Column(db.String(20), unique=True, nullable=False)
     current_lat = db.Column(db.Float, nullable=False)
     current_lon = db.Column(db.Float, nullable=False)
+    destination_latitude = db.Column(db.Float, nullable=True)
+    destination_longitude = db.Column(db.Float, nullable=True)
     status = db.Column(db.String(20), nullable=False, default='available') # 'available', 'on_trip', 'unavailable'
 
 class Trip(db.Model):

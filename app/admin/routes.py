@@ -145,6 +145,8 @@ def allocate_cab(trip_id):
     trip.cab_id = best_cab.id
     trip.status = 'in_progress'
     best_cab.status = 'on_trip'
+    best_cab.destination_latitude = trip.start_lat
+    best_cab.destination_longitude = trip.start_lon
 
     employee_user = User.query.get(trip.employee_id)
     employee_user.current_trip_status = 'in_trip'
