@@ -17,7 +17,6 @@ nodes = list(graph.nodes)
 print("Graph loaded successfully.")
 
 def create_sample_cabs(app):
-    """Creates or resets sample cabs in the database."""
     with app.app_context():
         if Cab.query.count() < NUM_CABS:
             Cab.query.delete() # Clear old cabs if count is wrong
@@ -89,7 +88,6 @@ if __name__ == "__main__":
                             end_node = ox.distance.nearest_nodes(graph, cab.destination_longitude, cab.destination_latitude)
                             try:
                                 route = ox.shortest_path(graph, start_node, end_node, weight='length')
-                                # Ensure the route is valid before assigning
                                 if route:
                                     cab_routes[cab.id] = {'route': route, 'index': 0}
                                 else:
@@ -98,7 +96,7 @@ if __name__ == "__main__":
                                     continue
                             except networkx.NetworkXNoPath:
                                 print(f"No path found for Cab {cab.id}. It will wait.")
-                                cab_routes[cab.id] = {'route': [], 'index': 0} # Prevent recalculating
+                                cab_routes[cab.id] = {'route': [], 'index': 0}
                                 continue 
 
                         # Move cab one step along its calculated route
@@ -144,7 +142,7 @@ if __name__ == "__main__":
                     print(f"Updated location for Cab ID {cab.id}: {location_data['lat']:.4f}, {location_data['lon']:.4f}, Status: {location_data['status']}")
                 
                 db.session.commit()
-                time.sleep(1) # Wait for 2 seconds before the next update
+                time.sleep(1) # Wait for 1 seconds before the next update
 
     except KeyboardInterrupt:
         print("\nSimulation stopped by user.")

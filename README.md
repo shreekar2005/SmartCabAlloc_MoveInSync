@@ -1,7 +1,7 @@
 # SmartCabAlloc_MoveInSync
-this if project for interview process of MoveInSync. My topic is Smart Cab Allocation System for Efficient Trip Planning
+This if project for interview process of MoveInSync. My topic is Smart Cab Allocation System for Efficient Trip Planning
 
-project documentation link : "i will update link shortly"
+Project Presentation LINK: "[PPT LINK](https://www.canva.com/design/DAGxvbPfauc/lrE7TNV_2ko1KorM0_RuSw/edit?utm_content=DAGxvbPfauc&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)"
 
 ## To run this project : 
 1. clone repo : `git clone https://github.com/shreekar2005/SmartCabAlloc_MoveInSync.git`

@@ -22,7 +22,6 @@ else:
 
 print("Saving the graph to a file...")
 
-# Save the graph to a file for faster loading in the main application
 ox.save_graphml(graph, filepath=file_path)
 
 print(f"Graph saved successfully to {file_path}")
