@@ -34,8 +34,8 @@ def employee_login_page():
 
 #Signup Routes
 
-BASE_LAT = 26.4715  # IIT Jodhpur Latitude
-BASE_LON = 73.1134  # IIT Jodhpur Longitude
+BASE_LAT = 26.2389  # Jodhpur Latitude
+BASE_LON = 73.0243  # Jodhpur Longitude
 
 @auth_bp.route('/admin/signup', methods=['GET', 'POST'])
 def admin_signup():

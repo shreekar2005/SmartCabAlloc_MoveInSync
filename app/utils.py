@@ -7,7 +7,7 @@ from.extensions import cache
 # Time Complexity: O((E + V) log V) where V is vertices (intersections) and E is edges (roads).
 # Space Complexity: O(V + E) to store the graph in memory.
 
-GRAPH_FILE_PATH = "iit_jodhpur.graphml"
+GRAPH_FILE_PATH = "jodhpur.graphml"
 
 # This uses the "Caching" to avoid reloading the large graph file from disk on every request.
 @cache.memoize(timeout=3600) # Cache for 1 hour

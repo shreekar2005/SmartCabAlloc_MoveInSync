@@ -1,9 +1,9 @@
 import osmnx as ox
 
 # Define the location and network type
-place_name = "Indian Institute of Technology Jodhpur, Jodhpur, Rajasthan, India"
+place_name = "Jodhpur, Rajasthan, India"
 network_type = "drive"
-file_path = "iit_jodhpur.graphml"
+file_path = "jodhpur.graphml"
 
 print(f"Downloading road network for {place_name}...")
 

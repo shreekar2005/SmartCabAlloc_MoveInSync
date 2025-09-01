@@ -1,29 +1,40 @@
 import time
 import random
 import socketio
+import osmnx as ox
 from app import create_app, db
 from app.models import Cab
 
 # --- Configuration ---
-BASE_LAT = 26.4715  # IIT Jodhpur Latitude
-BASE_LON = 73.1134  # IIT Jodhpur Longitude
+GRAPH_FILE = "jodhpur.graphml"
 NUM_CABS = 3
 SERVER_URL = 'http://127.0.0.1:5000'
 
-# --- Helper Functions ---
-def get_random_offset():
-    """Generates a small random offset for coordinates."""
-    return random.uniform(-0.01, 0.01)
+# Load the graph
+print(f"Loading graph from {GRAPH_FILE}...")
+graph = ox.load_graphml(GRAPH_FILE)
+nodes = list(graph.nodes)
+print("Graph loaded successfully.")
 
+# --- Helper Functions ---
 def create_sample_cabs(app):
     """Creates sample cabs in the database if they don't exist."""
     with app.app_context():
         if Cab.query.count() == 0:
             print("Creating sample cabs...")
-            cabs = [
-                Cab(driver_name=f'driver{i}', license_plate=f'RJ19PA{1000 + i}', current_lat=BASE_LAT + get_random_offset(), current_lon=BASE_LON + get_random_offset(), status='available')
-                for i in range(NUM_CABS)
-            ]
+            cabs = []
+            for i in range(NUM_CABS):
+                random_node = random.choice(nodes)
+                node_data = graph.nodes[random_node]
+                cabs.append(
+                    Cab(
+                        driver_name=f'driver{i}',
+                        license_plate=f'RJ19PA{1000 + i}',
+                        current_lat=node_data['y'],
+                        current_lon=node_data['x'],
+                        status='available'
+                    )
+                )
             db.session.bulk_save_objects(cabs)
             db.session.commit()
             print(f"{NUM_CABS} sample cabs created.")
@@ -60,32 +71,38 @@ if __name__ == "__main__":
 
     # Start simulation loop
     print("Starting cab simulation...")
-    try:
-        with app.app_context():
+cab_nodes = {}
+try:
+    with app.app_context():
+        while True:
             cabs = Cab.query.all()
-            while True:
-                for cab in cabs:
-                    # Update cab's location slightly
-                    cab.current_lat += random.uniform(-0.001, 0.001)
-                    cab.current_lon += random.uniform(-0.001, 0.001)
-                    
-                    # Randomly change status
-                    # if random.random() < 0.1:
-                    #     cab.status = 'on_trip' if cab.status == 'available' else 'available'
+            for cab in cabs:
+                if cab.id not in cab_nodes:
+                    cab_nodes[cab.id] = ox.distance.nearest_nodes(graph, X=cab.current_lon, Y=cab.current_lat)
 
-                    location_data = {
-                        'cab_id': cab.id,
-                        'lat': cab.current_lat,
-                        'lon': cab.current_lon,
-                        'status': cab.status
-                    }
-                    
-                    sio.emit('update_location', location_data)
-                    print(f"Updated location for Cab ID {cab.id}: {location_data['lat']:.4f}, {location_data['lon']:.4f}, Status: {location_data['status']}")
+                current_node = cab_nodes[cab.id]
+                neighbors = list(graph.neighbors(current_node))
+
+                if neighbors:
+                    next_node = random.choice(neighbors)
+                    cab.current_lat = graph.nodes[next_node]['y']
+                    cab.current_lon = graph.nodes[next_node]['x']
+                    cab_nodes[cab.id] = next_node
+
+                location_data = {
+                    'cab_id': cab.id,
+                    'lat': cab.current_lat,
+                    'lon': cab.current_lon,
+                    'status': cab.status
+                }
                 
-                time.sleep(1) # Wait for 1 seconds before the next update
+                sio.emit('update_location', location_data)
+                print(f"Updated location for Cab ID {cab.id}: {location_data['lat']:.4f}, {location_data['lon']:.4f}, Status: {location_data['status']}")
+            
+            db.session.commit()
+            time.sleep(2) # Wait for 2 seconds before the next update
 
-    except KeyboardInterrupt:
-        print("\nSimulation stopped by user.")
-    finally:
-        sio.disconnect()
+except KeyboardInterrupt:
+    print("\nSimulation stopped by user.")
+finally:
+    sio.disconnect()
