@@ -83,7 +83,7 @@ def request_trip():
 
     # Notify admins that a new trip has been requested
     socketio.emit('new_trip_request', {
-        'trip_id': new_trip.id,
+        'id': new_trip.id,
         'employee_id': user.public_id,
         'start_lat': new_trip.start_lat,
         'start_lon': new_trip.start_lon
@@ -177,6 +177,8 @@ def update_location():
 
     return jsonify({"message": "Location updated successfully"}), 200
 
+
+
 @employee_bp.route('/trips/finish', methods=['POST'])
 @jwt_required()
 def finish_employee_trip():
@@ -221,6 +223,6 @@ def finish_employee_trip():
 
     db.session.commit()
 
-    socketio.emit('trip_finished', {'trip_id': trip.id})
+    socketio.emit('trip_finished', {'id': trip.id})
 
     return jsonify({"message": "Trip finished successfully."}), 200

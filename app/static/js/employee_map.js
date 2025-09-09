@@ -67,9 +67,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
             'Other Cabs on Trip': 'yellow',
             'My Cab': 'red'
         };
-        let labels = '<strong>Legend</strong><br>';
+        let labels = '<strong>Legend</strong>';
         for (const item in items) {
-            labels += `<i style="background-image: url(https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${items[item]}.png); background-size: contain; display: inline-block; width: 12px; height: 20px; vertical-align: middle;"></i> ${item}<br>`;
+            labels += `<div class="legend-item"><i style="background-image: url(https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${items[item]}.png);"></i><span>${item}</span></div>`;
         }
         div.innerHTML = labels;
         return div;
@@ -97,7 +97,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
    
     if (typeof allocatedCab !== 'undefined' && allocatedCab) {
         myCabId = allocatedCab.id;
-        myTripId = allocatedCab.trip_id; // Make sure trip_id is passed from backend
         allocatedCabMarker = L.marker([allocatedCab.current_lat, allocatedCab.current_lon], { icon: icons.myCab })
             .addTo(map)
             .bindPopup(`My Cab<br>ID: ${allocatedCab.id}`);
@@ -141,6 +140,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
             if (response.ok) {
                 myTripId = data.trip_id;
                 statusMessage.textContent = `Trip Requested (ID: ${myTripId}). Waiting for allocation.`;
+                updateLocationBtn.style.display = 'none'; // Hide the button
             } else {
                 statusMessage.textContent = `Error: ${data.message || data.msg}`;
                 if (data.status === 'cancelled') {
@@ -246,6 +246,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
             if (response.ok) {
                 statusMessage.textContent = 'Trip completed! You can now request a new trip.';
+                updateLocationBtn.style.display = 'block'; // Show the button
         
                 // Reset UI to initial state
                 requestTripBtn.style.display = 'block';
@@ -285,7 +286,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
         if (data.employee_id === userPublicId) {
             console.log('My trip has been allocated!:', data);
             myCabId = data.cab_id;
-            myTripId = data.trip_id;
+            myTripId = data.id;
+            statusMessage.textContent = `Cab ${myCabId} is on the way!`;
             statusMessage.textContent = `Cab ${myCabId} is on the way!`;
 
             const cabLatLng = [data.cab_lat, data.cab_lon];
@@ -313,29 +315,31 @@ document.addEventListener('DOMContentLoaded', (event) => {
         const cabLatLng = [lat, lon];
 
         if (cab_id === myCabId) {
-            if (allocatedCabMarker) {
-                allocatedCabMarker.setLatLng(cabLatLng);
+            // If the trip for my cab is over, remove its marker and line
+            if (status === 'available') {
+                if (allocatedCabMarker) {
+                    map.removeLayer(allocatedCabMarker);
+                    allocatedCabMarker = null;
+                }
                 if (tripLine) {
-                    tripLine.setLatLngs([myLocationMarker.getLatLng(), cabLatLng]);
+                    map.removeLayer(tripLine);
+                    tripLine = null;
+                }
+                myCabId = null; // Ensure we no longer track this cab
+            } else { // Otherwise, just update its position
+                if (allocatedCabMarker) {
+                    allocatedCabMarker.setLatLng(cabLatLng);
+                    if (tripLine && myLocationMarker) { // Also check for myLocationMarker
+                        tripLine.setLatLngs([myLocationMarker.getLatLng(), cabLatLng]);
+                    }
                 }
             }
-        } 
-        else {
-            if (status === 'on_trip') {
-                if (otherCabMarkers[cab_id]) {
-                    otherCabMarkers[cab_id].setLatLng(cabLatLng);
-                } 
-                else {
-                    otherCabMarkers[cab_id] = L.marker(cabLatLng, { icon: icons.onTripOther })
-                        .addTo(map)
-                        .bindPopup(`Cab ID: ${cab_id}<br>Status: On Trip`);
-                }
-            }
-            else {
-                if (otherCabMarkers[cab_id]) {
-                    map.removeLayer(otherCabMarkers[cab_id]);
-                    delete otherCabMarkers[cab_id];
-                }
+        } else {
+            // This logic handles other cabs, which should not be shown on the employee map.
+            // If a marker for another cab exists, remove it.
+            if (otherCabMarkers[cab_id]) {
+                map.removeLayer(otherCabMarkers[cab_id]);
+                delete otherCabMarkers[cab_id];
             }
         }
     });

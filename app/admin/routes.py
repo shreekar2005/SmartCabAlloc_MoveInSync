@@ -41,7 +41,24 @@ def dashboard_view():
                 'start_lon': trip.start_lon
             })
 
-    return render_template('index.html', all_cabs=all_cabs, pending_trips=pending_trips)
+    # Fetch in-progress trips to draw lines and markers on reload
+    in_progress_trips_query = Trip.query.filter_by(status='in_progress').all()
+    in_progress_trips = []
+    for trip in in_progress_trips_query:
+        employee = User.query.get(trip.employee_id)
+        cab = Cab.query.get(trip.cab_id)
+        if employee and cab:
+            in_progress_trips.append({
+                'id': trip.id,
+                'employee_lat': trip.start_lat,
+                'employee_lon': trip.start_lon,
+                'cab_id': cab.id,
+                'cab_lat': cab.current_lat,
+                'cab_lon': cab.current_lon,
+                'employee_id': employee.public_id
+            })
+
+    return render_template('index.html', all_cabs=all_cabs, pending_trips=pending_trips, in_progress_trips=in_progress_trips)
 
 
 
@@ -77,7 +94,7 @@ def allocate_cab(trip_id):
     # Notify dashboards in real-time
     employee_user = User.query.get(trip.employee_id)
     allocation_data = {
-        'trip_id': trip.id,
+        'id': trip.id,
         'employee_id': employee_user.public_id,
         'employee_lat': trip.start_lat,
         'employee_lon': trip.start_lon,

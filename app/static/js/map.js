@@ -48,9 +48,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
             'Cab on Trip': 'yellow',
             'Employee': 'blue'
         };
-        let labels = '<strong>Legend</strong><br>';
+        let labels = '<strong>Legend</strong>';
         for (const item in items) {
-            labels += `<i style="background-image: url(https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${items[item]}.png); background-size: contain; display: inline-block; width: 12px; height: 20px; vertical-align: middle;"></i> ${item}<br>`;
+            labels += `<div class="legend-item"><i style="background-image: url(https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${items[item]}.png);"></i><span>${item}</span></div>`;
         }
         div.innerHTML = labels;
         return div;
@@ -120,6 +120,30 @@ document.addEventListener('DOMContentLoaded', (event) => {
         });
     }
 
+    if (typeof inProgressTrips !== 'undefined') {
+        inProgressTrips.forEach(trip => {
+            // Draw employee marker
+            if (!employeeMarkers[trip.id]) {
+                employeeMarkers[trip.id] = L.marker([trip.employee_lat, trip.employee_lon], { icon: icons.employee })
+                    .addTo(map)
+                    .bindPopup(`<b>Trip ID:</b> ${trip.id}<br><b>Employee ID:</b> ${trip.employee_id}`);
+            }
+
+            // Draw polyline
+            const latlngs = [
+                [trip.employee_lat, trip.employee_lon],
+                [trip.cab_lat, trip.cab_lon]
+            ];
+            tripLines[trip.id] = L.polyline(latlngs, { color: 'blue' }).addTo(map);
+            tripLines[trip.id].cab_id = trip.cab_id;
+
+            // Optional: update cab marker to be 'on_trip' if it's not already
+            if (cabMarkers[trip.cab_id]) {
+                cabMarkers[trip.cab_id].setIcon(icons.on_trip);
+            }
+        });
+    }
+
     // WebSocket for Real-Time Updates
     const socket = io.connect('http://' + document.domain + ':' + location.port);
 
@@ -151,24 +175,29 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
     socket.on('new_trip_request', (data) => {
         console.log('New trip request received:', data);
+        // Check if the trip is already in the list to avoid duplicates
+        if (document.getElementById(`trip-${data.id}`)) {
+            return;
+        }
+
         addPendingTripToList(data);
-        employeeMarkers[data.trip_id] = L.marker([data.employee_lat, data.employee_lon], { icon: icons.employee })
+        employeeMarkers[data.id] = L.marker([data.start_lat, data.start_lon], { icon: icons.employee })
             .addTo(map)
-            .bindPopup(`<b>Trip ID:</b> ${data.trip_id}<br><b>Employee ID:</b> ${data.employee_id}`);
+            .bindPopup(`<b>Trip ID:</b> ${data.id}<br><b>Employee ID:</b> ${data.employee_id}`);
     });
 
     socket.on('trip_allocated', (data) => {
         console.log('Trip allocated event received:', data);
-        const { trip_id, cab_id, employee_lat, employee_lon, cab_lat, cab_lon } = data;
+        const { id, cab_id, employee_lat, employee_lon, cab_lat, cab_lon } = data;
 
-        const listItem = document.getElementById(`trip-${trip_id}`);
+        const listItem = document.getElementById(`trip-${id}`);
         if (listItem) {
             listItem.remove();
         }
 
-        if (employeeMarkers[trip_id]) {
-            map.removeLayer(employeeMarkers[trip_id]);
-            delete employeeMarkers[trip_id];
+        // Keep employee marker on the map after allocation
+        if (employeeMarkers[id]) {
+            // The marker is intentionally not removed.
         }
 
         if (cabMarkers[cab_id]) {
@@ -180,16 +209,21 @@ document.addEventListener('DOMContentLoaded', (event) => {
             [employee_lat, employee_lon],
             [cab_lat, cab_lon]
         ];
-        tripLines[trip_id] = L.polyline(latlngs, { color: 'blue' }).addTo(map);
-        tripLines[trip_id].cab_id = cab_id;
+        tripLines[id] = L.polyline(latlngs, { color: 'blue' }).addTo(map);
+        tripLines[id].cab_id = cab_id;
     });
 
     socket.on('trip_finished', (data) => {
         console.log('Trip finished event received:', data);
-        const { trip_id } = data;
-        if (tripLines[trip_id]) {
-            map.removeLayer(tripLines[trip_id]);
-            delete tripLines[trip_id];
+        const { id } = data;
+        if (tripLines[id]) {
+            map.removeLayer(tripLines[id]);
+            delete tripLines[id];
+        }
+        // Also remove the employee marker
+        if (employeeMarkers[id]) {
+            map.removeLayer(employeeMarkers[id]);
+            delete employeeMarkers[id];
         }
     });
 });
