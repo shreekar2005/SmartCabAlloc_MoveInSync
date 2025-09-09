@@ -44,26 +44,6 @@ def dashboard_view():
     return render_template('index.html', all_cabs=all_cabs, pending_trips=pending_trips)
 
 
-@admin_bp.route('/trips', methods=['GET','POST'])
-@jwt_required() 
-def create_trip():
-    current_user_id = get_jwt_identity()
-    if not is_admin(current_user_id):
-        return jsonify({"message": "Admin access required"}), 403
-
-    data = request.get_json()
-    user = User.query.filter_by(public_id=data.get('employee_public_id')).first()
-    if not user:
-        return jsonify({"message": "Employee not found"}), 404
-
-    new_trip = Trip(
-        employee_id=user.id,
-        start_lat=data['start_lat'],
-        start_lon=data['start_lon']
-    )
-    db.session.add(new_trip)
-    db.session.commit()
-    return jsonify({"message": "Trip created", "trip_id": new_trip.id}), 201
 
 @admin_bp.route('/trips/<int:trip_id>/allocate', methods=['POST'])
 @jwt_required()

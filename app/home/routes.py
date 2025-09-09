@@ -2,7 +2,7 @@ from flask import request, jsonify, render_template, redirect, url_for
 from. import home_bp
 
 @home_bp.route('/', methods=['POST','GET'])
-def login_post():
+def home():
     return '''<!DOCTYPE html>
 <html lang="en">
 <head>

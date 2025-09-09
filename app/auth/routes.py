@@ -90,24 +90,3 @@ def login_page_redirect():
     # Redirect to the employee login page by default
     return redirect(url_for('auth.employee_login_page'))
 
-@auth_bp.route('/user/update_location', methods=['POST'])
-@jwt_required()
-def update_user_location():
-    current_user_public_id = get_jwt_identity()
-    user = User.query.filter_by(public_id=current_user_public_id).first()
-
-    if not user:
-        return jsonify({"message": "User not found"}), 404
-
-    data = request.get_json()
-    lat = data.get('latitude')
-    lon = data.get('longitude')
-
-    if lat is None or lon is None:
-        return jsonify({"message": "Latitude and longitude are required"}), 400
-
-    user.latitude = lat
-    user.longitude = lon
-    db.session.commit()
-
-    return jsonify({"message": "Location updated successfully"}), 200
