@@ -1,65 +1,39 @@
 from flask import Flask, jsonify
 from werkzeug.exceptions import HTTPException
-import os
 import traceback
-
-from.extensions import db, migrate, socketio, jwt, cache, cors
-from.models import Cab
+from .extensions import db, migrate, socketio, jwt, cache, cors
+from .models import Cab
 from config import Config
 import flask_monitoringdashboard as dashboard
 
 def create_app(config_class=Config):
-    app = Flask(__name__)
-    app.config.from_object(config_class)
+    temp_app = Flask(__name__)
+    temp_app.config.from_object(config_class)
 
     # Initialize Flask extensions
-    db.init_app(app)
-    migrate.init_app(app, db)
-    jwt.init_app(app)
-    cache.init_app(app)
-    cors.init_app(app)
+    db.init_app(temp_app)
+    migrate.init_app(temp_app, db)
+    jwt.init_app(temp_app)
+    cache.init_app(temp_app) # allowing every domain to connect or communicate with our domain (or API end points)
+    cors.init_app(temp_app)
 
     # for real-time location data integration
-    # we pass the app instance to socketio after all other initializations.
-    socketio.init_app(app, cors_allowed_origins="*")
+    socketio.init_app(temp_app, cors_allowed_origins="*")
 
-    # very modular routing
-    from.home.routes import home_bp
-    from.auth.routes import auth_bp
-    from.admin.routes import admin_bp
-    from.employee.routes import employee_bp
-    app.register_blueprint(home_bp, url_prefix='/')
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(admin_bp, url_prefix='/admin')
-    app.register_blueprint(employee_bp, url_prefix='/employee')
+    # very modular routing, i implemented this for modular design :)
+    from .home.routes import home_bp
+    from .auth.routes import auth_bp
+    from .admin.routes import admin_bp
+    from .employee.routes import employee_bp
+    temp_app.register_blueprint(home_bp, url_prefix='/')
+    temp_app.register_blueprint(auth_bp, url_prefix='/auth')
+    temp_app.register_blueprint(admin_bp, url_prefix='/admin')
+    temp_app.register_blueprint(employee_bp, url_prefix='/employee')
 
-    # for system monitoring
-    dashboard.config.enable_telemetry = False # to save our time when monitoring
-    # dashboard.config.BLUEPRINT_NAME = ['auth_bp', 'admin_bp', 'employee_bp', 'home_bp']
-    dashboard.bind(app)
+    # # for system monitoring
+    # dashboard.config.enable_telemetry = False # to save our time when monitoring
+    # dashboard.bind(temp_app)
 
-    # a centralized handler for all http exceptions.
-    @app.errorhandler(HTTPException)
-    def handle_http_exception(e):
-        response = e.get_response()
-        response.data = jsonify({
-            "code": e.code,
-            "name": e.name,
-            "description": e.description,
-        }).data
-        response.content_type = "application/json"
-        return response
-
-    # generic handler for any other exceptions.
-    @app.errorhandler(Exception)
-    def handle_generic_exception(e):
-        tb = traceback.format_exc()
-        app.logger.error(f"Unhandled exception: {str(e)}\n{tb}")
-        response = {
-            "error": "Internal Server Error",
-            "message": "An unexpected error occurred. Please try again later."
-        }
-        return jsonify(response), 500
 
     # defines the websocket event handlers for real-time communication.
     from flask_socketio import join_room
@@ -88,7 +62,7 @@ def create_app(config_class=Config):
         if not all([cab_id, lat, lon]):
             return
 
-        with app.app_context():
+        with temp_app.app_context():
             cab = Cab.query.get(cab_id)
             if cab:
                 cab.current_lat = lat
@@ -103,4 +77,31 @@ def create_app(config_class=Config):
                     'status': cab.status
                 })
 
-    return app
+    # a centralized handler for all http exceptions.
+    @temp_app.errorhandler(HTTPException)
+    def handle_http_exception(e):
+        response = e.get_response()
+        response.data = jsonify({
+            "code": e.code,
+            "name": e.name,
+            "description": e.description,
+        }).data
+        response.content_type = "application/json"
+        return response
+
+    # generic handler for any other exceptions.
+    @temp_app.errorhandler(Exception)
+    def handle_generic_exception(e):
+        tb = traceback.format_exc()
+        temp_app.logger.error(f"Unhandled exception: {str(e)}\n{tb}")
+        response = {
+            "error": "Internal Server Error",
+            "message": "An unexpected error occurred. Please try again later."
+        }
+        return jsonify(response), 500
+    
+    # for system monitoring
+    dashboard.config.enable_telemetry = False # to save our time when monitoring
+    dashboard.bind(temp_app)
+    
+    return temp_app

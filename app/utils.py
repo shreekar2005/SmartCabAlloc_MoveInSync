@@ -4,12 +4,12 @@ from .extensions import cache
 from .models import Cab
 from math import radians, cos, sin, asin, sqrt
 
-# this file addresses the cost estimation - time and space
-# using dijkstra's, which is efficient for finding the shortest path.
+# using dijkstra's, which is one of best algorith for finding the shortest path.
 # time complexity: o((e + v) log v) where v is vertices (intersections) and e is edges (roads).
 # space complexity: o(v + e) to store the graph in memory.
 
 GRAPH_FILE_PATH = "jodhpur.graphml"
+SEARCH_RADIUS_KM = 5.0
 
 # this uses the caching to avoid reloading the large graph file from disk on every request.
 @cache.memoize(timeout=3600) # cache for 1 hour
@@ -35,18 +35,12 @@ def find_shortest_path_distance(graph, start_coords, end_coords):
         # calculate the shortest path length using dijkstra's algorithm
         distance_meters = nx.shortest_path_length(graph, source=start_node, target=end_node, weight='length')
         return distance_meters
+    
     except (nx.NetworkXNoPath, nx.NodeNotFound):
         # handle cases where no path exists or nodes are not found
         return float('inf')
 
 def haversine_distance(lat1, lon1, lat2, lon2):
-    """
-    calculate the great-circle distance in kilometers between two points 
-    on the earth (specified in decimal degrees).
-    """
-    # earth's radius in kilometers
-    R = 6371.0
-
     # convert decimal degrees to radians
     rlat1, rlon1, rlat2, rlon2 = map(radians, [lat1, lon1, lat2, lon2])
 
@@ -55,10 +49,11 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     dlat = rlat2 - rlat1
     a = sin(dlat / 2)**2 + cos(rlat1) * cos(rlat2) * sin(dlon / 2)**2
     c = 2 * asin(sqrt(a))
-    
+    R = 6371.0 # earth's radius in kilometers
     distance = R * c
     return distance
 
+# so first haversine distance is calculate to check that is there any cab in <5KM radius 
 def allocate_cab_to_trip(trip):
     all_available_cabs = Cab.query.filter_by(status='available').all()
     if not all_available_cabs:
@@ -66,7 +61,6 @@ def allocate_cab_to_trip(trip):
     
     trip_start_coords = (trip.start_lat, trip.start_lon)
     nearby_cabs = []
-    SEARCH_RADIUS_KM = 5.0
 
     for cab in all_available_cabs:
         distance_as_crow_flies = haversine_distance(

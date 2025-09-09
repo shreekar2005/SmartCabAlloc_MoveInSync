@@ -69,7 +69,7 @@ def index():
             <li><a href="/auth/admin/login">For Admin Dashboard</a></li>
             <li><a href="/auth/employee/login">For Employee Dashboard</a></li>
             <li><a href="/dashboard">For Monitoring App</a></li>
-            <li><a href="#" class="info-link">For Info About This Project</a></li>
+            <li><a href="https://github.com/shreekar2005/SmartCabAlloc_MoveInSync" class="info-link">For Info About This Project</a></li>
         </ul>
     </div>
 
