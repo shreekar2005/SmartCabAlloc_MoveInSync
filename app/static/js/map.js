@@ -213,6 +213,23 @@ document.addEventListener('DOMContentLoaded', (event) => {
         tripLines[id].cab_id = cab_id;
     });
 
+    socket.on('trip_request_removed', (data) => {
+        console.log('Trip request removed:', data);
+        const { trip_id, reason } = data;
+        
+        // Remove from pending trips list
+        const listItem = document.getElementById(`trip-${trip_id}`);
+        if (listItem) {
+            listItem.remove();
+        }
+        
+        // Remove employee marker from map
+        if (employeeMarkers[trip_id]) {
+            map.removeLayer(employeeMarkers[trip_id]);
+            delete employeeMarkers[trip_id];
+        }
+    });
+
     socket.on('trip_finished', (data) => {
         console.log('Trip finished event received:', data);
         const { id } = data;

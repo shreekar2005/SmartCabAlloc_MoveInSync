@@ -3,6 +3,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
     const statusMessage = document.getElementById('status-message');
     const requestTripBtn = document.getElementById('request-trip-btn');
     const updateLocationBtn = document.getElementById('update-location-btn');
+    const confirmLocationBtn = document.getElementById('confirm-location-btn');
+    const cancelLocationBtn = document.getElementById('cancel-location-btn');
     const finishTripBtn = document.getElementById('finish-trip-btn');
     const reRequestTripBtn = document.getElementById('re-request-trip-btn');
     const cancelledTripIdInput = document.getElementById('cancelled-trip-id');
@@ -13,6 +15,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
     let myTripId = currentTripId;
     let myCabId = null;
     const otherCabMarkers = {};
+    let isUpdatingLocation = false;
+    let originalLocationForUpdate = null;
 
     
     function getCookie(name) {
@@ -78,7 +82,10 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
     // Initial Drawing 
     if (typeof userLocation !== 'undefined' && userLocation.lat && userLocation.lon) {
-        myLocationMarker = L.marker([userLocation.lat, userLocation.lon], { icon: icons.myLocation })
+        myLocationMarker = L.marker([userLocation.lat, userLocation.lon], { 
+            icon: icons.myLocation,
+            draggable: false
+        })
             .addTo(map)
             .bindPopup('My Location').openPopup();
         map.setView([userLocation.lat, userLocation.lon], 15);
@@ -108,11 +115,18 @@ document.addEventListener('DOMContentLoaded', (event) => {
     }
 
     map.on('click', function(e) {
-        if (myLocationMarker) {
-            myLocationMarker.setLatLng(e.latlng);
-        } else {
-            myLocationMarker = L.marker(e.latlng, { icon: icons.myLocation }).addTo(map);
+        // Only allow clicking to set location if in location update mode
+        if (isUpdatingLocation) {
+            if (myLocationMarker) {
+                myLocationMarker.setLatLng(e.latlng);
+            } else {
+                myLocationMarker = L.marker(e.latlng, { 
+                    icon: icons.myLocation,
+                    draggable: true
+                }).addTo(map);
+            }
         }
+        // If not in update mode, do nothing - marker stays where it is
     });
 
     //Request Trip Button
@@ -197,11 +211,40 @@ document.addEventListener('DOMContentLoaded', (event) => {
         }
     });
 
-    updateLocationBtn.addEventListener('click', async () => {
+    updateLocationBtn.addEventListener('click', () => {
         if (!myLocationMarker) {
             alert('Error: Please click on the map to set your location first.');
             return;
         }
+        
+        // Store original location for cancel functionality
+        originalLocationForUpdate = myLocationMarker.getLatLng();
+        
+        // Enter location update mode
+        isUpdatingLocation = true;
+        
+        // Make marker draggable
+        myLocationMarker.dragging.enable();
+        
+        // Hide request trip button and show confirm/cancel location buttons
+        requestTripBtn.style.display = 'none';
+        confirmLocationBtn.style.display = 'block';
+        cancelLocationBtn.style.display = 'block';
+        updateLocationBtn.style.display = 'none';
+        
+        // Update status message
+        statusMessage.textContent = 'Drag your marker to the new location and click "Confirm Location"';
+        
+        // Update popup to indicate draggable state
+        myLocationMarker.bindPopup('Drag me to your new location').openPopup();
+    });
+
+    confirmLocationBtn.addEventListener('click', async () => {
+        if (!myLocationMarker) {
+            alert('Error: Location marker not found.');
+            return;
+        }
+        
         const latlng = myLocationMarker.getLatLng();
         try {
             const csrfToken = getCookie('csrf_access_token');
@@ -217,6 +260,24 @@ document.addEventListener('DOMContentLoaded', (event) => {
             const data = await response.json();
             if (response.ok) {
                 statusMessage.textContent = 'Location updated successfully!';
+                
+                // Exit location update mode
+                isUpdatingLocation = false;
+                
+                // Make marker non-draggable
+                myLocationMarker.dragging.disable();
+                
+                // Show request trip button and hide confirm/cancel location buttons
+                requestTripBtn.style.display = 'block';
+                confirmLocationBtn.style.display = 'none';
+                cancelLocationBtn.style.display = 'none';
+                updateLocationBtn.style.display = 'block';
+                
+                // Clear original location reference
+                originalLocationForUpdate = null;
+                
+                // Update popup back to normal
+                myLocationMarker.bindPopup('My Location').openPopup();
             } else {
                 statusMessage.textContent = `Error: ${data.message || data.msg}`;
             }
@@ -224,6 +285,36 @@ document.addEventListener('DOMContentLoaded', (event) => {
             statusMessage.textContent = 'An unexpected error occurred while updating location.';
             console.error('Update location failed:', error);
         }
+    });
+
+    cancelLocationBtn.addEventListener('click', () => {
+        if (!myLocationMarker || !originalLocationForUpdate) {
+            return;
+        }
+        
+        // Restore original location
+        myLocationMarker.setLatLng(originalLocationForUpdate);
+        
+        // Exit location update mode
+        isUpdatingLocation = false;
+        
+        // Make marker non-draggable
+        myLocationMarker.dragging.disable();
+        
+        // Show request trip button and hide confirm/cancel location buttons
+        requestTripBtn.style.display = 'block';
+        confirmLocationBtn.style.display = 'none';
+        cancelLocationBtn.style.display = 'none';
+        updateLocationBtn.style.display = 'block';
+        
+        // Update popup back to normal
+        myLocationMarker.bindPopup('My Location').openPopup();
+        
+        // Reset status message
+        statusMessage.textContent = 'Location update cancelled.';
+        
+        // Clear original location reference
+        originalLocationForUpdate = null;
     });
 
     // Listener for the Finish Trip button
@@ -307,6 +398,36 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
             requestTripBtn.style.display = 'none';
             finishTripBtn.style.display = 'block';
+        }
+    });
+
+    socket.on('trip_allocation_failed', (data) => {
+        if (data.employee_id === userPublicId) {
+            console.log('Trip allocation failed:', data);
+            
+            // Update status message with error
+            statusMessage.textContent = `Trip allocation failed: ${data.message}`;
+            
+            // Reset UI to allow new requests
+            requestTripBtn.style.display = 'block';
+            requestTripBtn.disabled = false;
+            updateLocationBtn.style.display = 'block';
+            finishTripBtn.style.display = 'none';
+            
+            // Clear trip ID
+            myTripId = null;
+            
+            // Clean up any cab marker or line (shouldn't be any, but just in case)
+            if (allocatedCabMarker) {
+                map.removeLayer(allocatedCabMarker);
+                allocatedCabMarker = null;
+            }
+            if (tripLine) {
+                map.removeLayer(tripLine);
+                tripLine = null;
+            }
+            
+            myCabId = null;
         }
     });
 

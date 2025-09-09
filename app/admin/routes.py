@@ -76,6 +76,27 @@ def allocate_cab(trip_id):
     best_cab, message = allocate_cab_to_trip(trip)
 
     if not best_cab:
+        # Cancel the trip and notify the employee
+        trip.status = 'cancelled'
+        db.session.commit()
+        
+        # Get employee information
+        employee_user = User.query.get(trip.employee_id)
+        
+        # Emit allocation failure to the specific employee
+        if employee_user:
+            socketio.emit('trip_allocation_failed', {
+                'trip_id': trip.id,
+                'message': message,
+                'employee_id': employee_user.public_id
+            })
+        
+        # Emit to admin dashboard to remove the failed request
+        socketio.emit('trip_request_removed', {
+            'trip_id': trip.id,
+            'reason': 'allocation_failed'
+        }, room='admins')
+        
         return jsonify({"message": message}), 404
 
     # Assign the cab and update statuses
