@@ -1,8 +1,7 @@
-from flask import request, jsonify, render_template, redirect, url_for
 from. import home_bp
 
 @home_bp.route('/', methods=['POST','GET'])
-def home():
+def index():
     return '''<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -53,7 +52,7 @@ def home():
         .nav-list a:hover {
             background-color: #0056b3;
         }
-        /* Differentiating the 'info' link */
+        /* differentiating the 'info' link */
         .nav-list a.info-link {
             background-color: #6c757d;
         }

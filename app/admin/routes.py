@@ -31,7 +31,7 @@ def dashboard_view():
     pending_trips_query = Trip.query.filter_by(status='requested').all()
     pending_trips = []
     for trip in pending_trips_query:
-        # Fetch the employee to get their public ID for consistency
+        # fetch the employee to get their public id for consistency
         employee = User.query.get(trip.employee_id)
         if employee:
             pending_trips.append({
@@ -41,7 +41,7 @@ def dashboard_view():
                 'start_lon': trip.start_lon
             })
 
-    # Fetch in-progress trips to draw lines and markers on reload
+    # fetch in-progress trips to draw lines and markers on reload
     in_progress_trips_query = Trip.query.filter_by(status='in_progress').all()
     in_progress_trips = []
     for trip in in_progress_trips_query:
@@ -76,14 +76,14 @@ def allocate_cab(trip_id):
     best_cab, message = allocate_cab_to_trip(trip)
 
     if not best_cab:
-        # Cancel the trip and notify the employee
+        # cancel the trip and notify the employee
         trip.status = 'cancelled'
         db.session.commit()
         
-        # Get employee information
+        # get employee information
         employee_user = User.query.get(trip.employee_id)
         
-        # Emit allocation failure to the specific employee
+        # emit allocation failure to the specific employee
         if employee_user:
             socketio.emit('trip_allocation_failed', {
                 'trip_id': trip.id,
@@ -91,7 +91,7 @@ def allocate_cab(trip_id):
                 'employee_id': employee_user.public_id
             })
         
-        # Emit to admin dashboard to remove the failed request
+        # emit to admin dashboard to remove the failed request
         socketio.emit('trip_request_removed', {
             'trip_id': trip.id,
             'reason': 'allocation_failed'
@@ -99,7 +99,7 @@ def allocate_cab(trip_id):
         
         return jsonify({"message": message}), 404
 
-    # Assign the cab and update statuses
+    # assign the cab and update statuses
     trip.cab_id = best_cab.id
     trip.status = 'in_progress'
     best_cab.status = 'on_trip'
@@ -112,7 +112,7 @@ def allocate_cab(trip_id):
 
     db.session.commit()
 
-    # Notify dashboards in real-time
+    # notify dashboards in real-time
     employee_user = User.query.get(trip.employee_id)
     allocation_data = {
         'id': trip.id,

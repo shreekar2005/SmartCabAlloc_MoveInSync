@@ -2,7 +2,6 @@ from flask import request, jsonify, render_template
 from . import employee_bp
 from ..models import Cab, User, Trip
 from ..extensions import db, socketio
-from ..utils import allocate_cab_to_trip
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 
@@ -71,7 +70,7 @@ def request_trip():
     if not user:
         return jsonify({"message": "User not found"}), 404
 
-    # Create the new trip
+    # create the new trip
     new_trip = Trip(
         employee_id=user.id,
         start_lat=lat,
@@ -81,7 +80,7 @@ def request_trip():
     db.session.add(new_trip)
     db.session.commit()
 
-    # Notify admins that a new trip has been requested
+    # notify admins that a new trip has been requested
     socketio.emit('new_trip_request', {
         'id': new_trip.id,
         'employee_id': user.public_id,
@@ -131,7 +130,7 @@ def finish_employee_trip():
 
     trip = Trip.query.get_or_404(user.current_trip_id)
 
-    # Security check: Ensure the employee finishing the trip is the one who requested it
+    # security check: ensure the employee finishing the trip is the one who requested it
     if trip.employee_id != user.id:
         return jsonify({"message": "Forbidden: You are not authorized to modify this trip."}), 403
 
@@ -140,17 +139,17 @@ def finish_employee_trip():
 
     allocated_cab = Cab.query.get(trip.cab_id)
 
-    # Update the trip
+    # update the trip
     trip.status = 'completed'
     trip.end_time = datetime.utcnow()
 
-    # Free up the cab
+    # free up the cab
     if allocated_cab:
         allocated_cab.status = 'available'
         allocated_cab.destination_latitude = None
         allocated_cab.destination_longitude = None
 
-        # Emit a real-time update that the cab is now available
+        # emit a real-time update that the cab is now available
         socketio.emit('location_update', {
             'cab_id': allocated_cab.id,
             'lat': allocated_cab.current_lat,
@@ -158,7 +157,7 @@ def finish_employee_trip():
             'status': 'available'
         })
 
-    # Update user's trip status
+    # update user's trip status
     user.current_trip_status = 'not_in_trip'
     user.current_trip_id = None
 

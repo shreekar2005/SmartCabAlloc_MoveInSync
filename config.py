@@ -13,8 +13,8 @@ class Config:
     CACHE_TYPE = 'SimpleCache'
     CACHE_DEFAULT_TIMEOUT = 300
 
-    # This tells Flask-JWT-Extended to expect JWTs in cookies
+    # this tells flask-jwt-extended to expect jwts in cookies
     JWT_TOKEN_LOCATION = ['cookies']
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=30)
-    # Default is 30 days.
+    # default is 30 days.
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=90)

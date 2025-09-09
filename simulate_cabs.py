@@ -4,13 +4,13 @@ import socketio
 import osmnx as ox
 from app import create_app, db
 from app.models import Cab
-import networkx # Added to handle pathfinding errors
+import networkx
 
 GRAPH_FILE = "jodhpur.graphml"
 NUM_CABS = 3
 SERVER_URL = 'http://127.0.0.1:5000'
 
-# Load the graph
+# load the graph
 print(f"Loading graph from {GRAPH_FILE}...")
 graph = ox.load_graphml(GRAPH_FILE)
 nodes = list(graph.nodes)
@@ -19,7 +19,7 @@ print("Graph loaded successfully.")
 def create_sample_cabs(app):
     with app.app_context():
         if Cab.query.count() < NUM_CABS:
-            Cab.query.delete() # Clear old cabs if count is wrong
+            Cab.query.delete() # clear old cabs if count is wrong
             print("Creating sample cabs...")
             cabs = []
             for i in range(NUM_CABS):
@@ -32,7 +32,7 @@ def create_sample_cabs(app):
                         current_lat=node_data['y'],
                         current_lon=node_data['x'],
                         status='available',
-                        # Ensure destination is initially null
+                        # ensure destination is initially null
                         destination_latitude=None,
                         destination_longitude=None
                     )
@@ -79,9 +79,9 @@ if __name__ == "__main__":
                 cabs = Cab.query.all()
                 for cab in cabs:
                     
-                    # Cab has a destination and is on a trip
+                    # cab has a destination and is on a trip
                     if cab.destination_latitude is not None and cab.destination_longitude is not None:
-                        # If cab just got a destination, calculate its route
+                        # if cab just got a destination, calculate its route
                         if cab.id not in cab_routes or not cab_routes[cab.id]['route']:
                             print(f"Cab {cab.id} calculating route to destination...")
                             start_node = ox.distance.nearest_nodes(graph, cab.current_lon, cab.current_lat)
@@ -99,9 +99,9 @@ if __name__ == "__main__":
                                 cab_routes[cab.id] = {'route': [], 'index': 0}
                                 continue 
 
-                        # Move cab one step along its calculated route
+                        # move cab one step along its calculated route
                         state = cab_routes.get(cab.id)
-                        # Safely check for route existence and index
+                        # safely check for route existence and index
                         if state and state.get('route') and state['index'] < len(state['route']):
                             next_node = state['route'][state['index']]
                             cab.current_lat = graph.nodes[next_node]['y']
@@ -109,13 +109,13 @@ if __name__ == "__main__":
                             state['index'] += 1
                         else:
                             print(f"Cab {cab.id} has arrived at its destination.")
-                            # When trip is over, clear destination and route
+                            # when trip is over, clear destination and route
                             cab.destination_latitude = None
                             cab.destination_longitude = None
                             cab.status = 'available'
                             cab_routes[cab.id] = {'route': [], 'index': 0}
 
-                    # Cab is available and moves randomly
+                    # cab is available and moves randomly
                     else:
                         if cab.id not in cab_nodes:
                             cab_nodes[cab.id] = ox.distance.nearest_nodes(graph, cab.current_lon, cab.current_lat)
@@ -130,7 +130,7 @@ if __name__ == "__main__":
                             cab_nodes[cab.id] = next_node
                     
 
-                    # This part runs for all cabs, regardless of how they moved
+                    # this part runs for all cabs, regardless of how they moved
                     location_data = {
                         'cab_id': cab.id,
                         'lat': cab.current_lat,
@@ -142,7 +142,7 @@ if __name__ == "__main__":
                     print(f"Updated location for Cab ID {cab.id}: {location_data['lat']:.4f}, {location_data['lon']:.4f}, Status: {location_data['status']}")
                 
                 db.session.commit()
-                time.sleep(1) # Wait for 1 seconds before the next update
+                time.sleep(1) # wait for 1 seconds before the next update
 
     except KeyboardInterrupt:
         print("\nSimulation stopped by user.")

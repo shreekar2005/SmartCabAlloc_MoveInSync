@@ -6,7 +6,7 @@ from..extensions import db
 from flask_jwt_extended import create_access_token, set_access_cookies
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-#Login Routes
+# login routes
 
 @auth_bp.route('/login', methods=['POST'])
 def login_post():
@@ -36,10 +36,10 @@ def employee_login_page():
 def login_page_redirect():
     return redirect(url_for('auth.employee_login_page'))
 
-#Signup Routes
+# signup routes
 
-BASE_LAT = 26.2389  # Jodhpur Latitude
-BASE_LON = 73.0243  # Jodhpur Longitude
+BASE_LAT = 26.2389  # jodhpur latitude
+BASE_LON = 73.0243  # jodhpur longitude
 
 @auth_bp.route('/admin/signup', methods=['GET', 'POST'])
 def admin_signup():

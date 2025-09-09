@@ -5,22 +5,22 @@ from flask import current_app
 
 from alembic import context
 
-# this is the Alembic Config object, which provides
+# this is the alembic config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
+# interpret the config file for python logging.
+# this line sets up loggers basically.
 fileConfig(config.config_file_name)
 logger = logging.getLogger('alembic.env')
 
 
 def get_engine():
     try:
-        # this works with Flask-SQLAlchemy<3 and Alchemical
+        # this works with flask-sqlalchemy<3 and alchemical
         return current_app.extensions['migrate'].db.get_engine()
     except (TypeError, AttributeError):
-        # this works with Flask-SQLAlchemy>=3
+        # this works with flask-sqlalchemy>=3
         return current_app.extensions['migrate'].db.engine
 
 
@@ -32,10 +32,10 @@ def get_engine_url():
         return str(get_engine().url).replace('%', '%%')
 
 
-# add your model's MetaData object here
+# add your model's metadata object here
 # for 'autogenerate' support
 # from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
+# target_metadata = mymodel.base.metadata
 config.set_main_option('sqlalchemy.url', get_engine_url())
 target_db = current_app.extensions['migrate'].db
 
@@ -52,14 +52,14 @@ def get_metadata():
 
 
 def run_migrations_offline():
-    """Run migrations in 'offline' mode.
+    """run migrations in 'offline' mode.
 
-    This configures the context with just a URL
-    and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
+    this configures the context with just a url
+    and not an engine, though an engine is acceptable
+    here as well.  by skipping the engine creation
+    we don't even need a dbapi to be available.
 
-    Calls to context.execute() here emit the given string to the
+    calls to context.execute() here emit the given string to the
     script output.
 
     """
@@ -73,9 +73,9 @@ def run_migrations_offline():
 
 
 def run_migrations_online():
-    """Run migrations in 'online' mode.
+    """run migrations in 'online' mode.
 
-    In this scenario we need to create an Engine
+    in this scenario we need to create an engine
     and associate a connection with the context.
 
     """

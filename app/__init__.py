@@ -19,8 +19,8 @@ def create_app(config_class=Config):
     cache.init_app(app)
     cors.init_app(app)
 
-    # for "Real-Time Location Data Integration"
-    # We pass the app instance to SocketIO after all other initializations.
+    # for real-time location data integration
+    # we pass the app instance to socketio after all other initializations.
     socketio.init_app(app, cors_allowed_origins="*")
 
     # very modular routing
@@ -33,12 +33,12 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(employee_bp, url_prefix='/employee')
 
-    # for "System Monitoring"
+    # for system monitoring
     dashboard.config.enable_telemetry = False # to save our time when monitoring
     # dashboard.config.BLUEPRINT_NAME = ['auth_bp', 'admin_bp', 'employee_bp', 'home_bp']
     dashboard.bind(app)
 
-    # A centralized handler for all HTTP exceptions.
+    # a centralized handler for all http exceptions.
     @app.errorhandler(HTTPException)
     def handle_http_exception(e):
         response = e.get_response()
@@ -50,7 +50,7 @@ def create_app(config_class=Config):
         response.content_type = "application/json"
         return response
 
-    #generic handler for any other exceptions.
+    # generic handler for any other exceptions.
     @app.errorhandler(Exception)
     def handle_generic_exception(e):
         tb = traceback.format_exc()
@@ -61,7 +61,7 @@ def create_app(config_class=Config):
         }
         return jsonify(response), 500
 
-    #defines the WebSocket event handlers for real-time communication.
+    # defines the websocket event handlers for real-time communication.
     from flask_socketio import join_room
 
     @socketio.on('connect')
@@ -80,7 +80,7 @@ def create_app(config_class=Config):
 
     @socketio.on('update_location')
     def handle_location_update(data):
-        # In a real app, we will authenticate this update (e.g. a JWT sent in the connection headers)
+        # in a real app, we will authenticate this update (e.g. a jwt sent in the connection headers)
         cab_id = data.get('cab_id')
         lat = data.get('lat')
         lon = data.get('lon')
@@ -95,7 +95,7 @@ def create_app(config_class=Config):
                 cab.current_lon = lon
                 db.session.commit()
                 
-                # Broadcast the update to all connected clients
+                # broadcast the update to all connected clients
                 socketio.emit('location_update', {
                     'cab_id': cab.id,
                     'lat': cab.current_lat,

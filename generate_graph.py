@@ -1,17 +1,17 @@
 import osmnx as ox
 import networkx as nx
 
-# Define the location and network type
+# define the location and network type
 place_name = "Jodhpur, Rajasthan, India"
 network_type = "drive"
 file_path = "jodhpur.graphml"
 
 print(f"Downloading road network for {place_name}...")
 
-# Download the road network graph
+# download the road network graph
 graph = ox.graph_from_place(place_name, network_type=network_type)
 
-# Get the largest strongly connected component
+# get the largest strongly connected component
 if not nx.is_strongly_connected(graph):
     print("Graph is not strongly connected. Extracting the largest component.")
     largest_scc = max(nx.strongly_connected_components(graph), key=len)
