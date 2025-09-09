@@ -81,43 +81,18 @@ def request_trip():
     db.session.add(new_trip)
     db.session.commit()
 
-    best_cab, message = allocate_cab_to_trip(new_trip)
-
-    if not best_cab:
-        new_trip.status = 'cancelled'
-        db.session.commit()
-        return jsonify({"message": message, "trip_id": new_trip.id, "status": "cancelled"}), 404
-
-    # Assign the cab and update statuses
-    new_trip.cab_id = best_cab.id
-    new_trip.status = 'in_progress'
-    best_cab.status = 'on_trip'
-    best_cab.destination_latitude = new_trip.start_lat
-    best_cab.destination_longitude = new_trip.start_lon
-
-    employee_user = User.query.get(new_trip.employee_id)
-    employee_user.current_trip_status = 'in_trip'
-    employee_user.current_trip_id = new_trip.id
-
-    db.session.commit()
-
-    # Notify dashboards in real-time
-    allocation_data = {
+    # Notify admins that a new trip has been requested
+    socketio.emit('new_trip_request', {
         'trip_id': new_trip.id,
-        'employee_id': employee_user.public_id,
-        'employee_lat': new_trip.start_lat,
-        'employee_lon': new_trip.start_lon,
-        'cab_id': best_cab.id,
-        'cab_lat': best_cab.current_lat,
-        'cab_lon': best_cab.current_lon
-    }
-    socketio.emit('trip_allocated', allocation_data)
+        'employee_id': user.public_id,
+        'start_lat': new_trip.start_lat,
+        'start_lon': new_trip.start_lon
+    }, room='admins')
 
     return jsonify({
-        "message": f"Cab {best_cab.id} allocated to trip {new_trip.id}",
-        "cab_id": best_cab.id,
+        "message": "Trip requested successfully. Waiting for admin allocation.",
         "trip_id": new_trip.id,
-        "status": "in_progress"
+        "status": "requested"
     }), 200
 
 @employee_bp.route('/re-request-trip/<int:trip_id>', methods=['POST'])
