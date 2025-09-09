@@ -1,9 +1,38 @@
 document.addEventListener('DOMContentLoaded', (event) => {
-    const map = L.map('map').setView([26.2389, 73.0243], 13);
+    // Restore saved map view or use default
+    const savedView = localStorage.getItem('adminMapView');
+    let initialView, initialZoom;
+    
+    if (savedView) {
+        const viewData = JSON.parse(savedView);
+        initialView = [viewData.lat, viewData.lng];
+        initialZoom = viewData.zoom;
+    } else {
+        initialView = [26.2389, 73.0243];
+        initialZoom = 13;
+    }
+    
+    const map = L.map('map').setView(initialView, initialZoom);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
+
+    // Function to save current map view to localStorage
+    function saveMapView() {
+        const center = map.getCenter();
+        const zoom = map.getZoom();
+        const viewData = {
+            lat: center.lat,
+            lng: center.lng,
+            zoom: zoom
+        };
+        localStorage.setItem('adminMapView', JSON.stringify(viewData));
+    }
+
+    // Save map view on zoom and pan events
+    map.on('zoomend', saveMapView);
+    map.on('moveend', saveMapView);
 
     const cabMarkers = {};
     const employeeMarkers = {};

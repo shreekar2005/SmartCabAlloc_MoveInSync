@@ -95,65 +95,6 @@ def request_trip():
         "status": "requested"
     }), 200
 
-@employee_bp.route('/re-request-trip/<int:trip_id>', methods=['POST'])
-@jwt_required()
-def re_request_trip(trip_id):
-    current_user_public_id = get_jwt_identity()
-    user = User.query.filter_by(public_id=current_user_public_id).first()
-
-    if not user:
-        return jsonify({"message": "User not found"}), 404
-
-    trip = Trip.query.get_or_404(trip_id)
-
-    if trip.employee_id != user.id:
-        return jsonify({"message": "Forbidden"}), 403
-
-    if trip.status != 'cancelled':
-        return jsonify({"message": "Trip is not cancelled"}), 400
-
-    trip.status = 'requested'
-    db.session.commit()
-
-    best_cab, message = allocate_cab_to_trip(trip)
-
-    if not best_cab:
-        trip.status = 'cancelled'
-        db.session.commit()
-        return jsonify({"message": message, "trip_id": trip.id, "status": "cancelled"}), 404
-
-    # Assign the cab and update statuses
-    trip.cab_id = best_cab.id
-    trip.status = 'in_progress'
-    best_cab.status = 'on_trip'
-    best_cab.destination_latitude = trip.start_lat
-    best_cab.destination_longitude = trip.start_lon
-
-    employee_user = User.query.get(trip.employee_id)
-    employee_user.current_trip_status = 'in_trip'
-    employee_user.current_trip_id = trip.id
-
-    db.session.commit()
-
-    # Notify dashboards in real-time
-    allocation_data = {
-        'trip_id': trip.id,
-        'employee_id': employee_user.public_id,
-        'employee_lat': trip.start_lat,
-        'employee_lon': trip.start_lon,
-        'cab_id': best_cab.id,
-        'cab_lat': best_cab.current_lat,
-        'cab_lon': best_cab.current_lon
-    }
-    socketio.emit('trip_allocated', allocation_data)
-
-    return jsonify({
-        "message": f"Cab {best_cab.id} allocated to trip {trip.id}",
-        "cab_id": best_cab.id,
-        "trip_id": trip.id,
-        "status": "in_progress"
-    }), 200
-
 
 @employee_bp.route('/update-location', methods=['POST'])
 @jwt_required()

@@ -32,6 +32,10 @@ def admin_login_page():
 def employee_login_page():
     return render_template('employee_login.html')
 
+@auth_bp.route('/login', methods=['GET'])
+def login_page_redirect():
+    return redirect(url_for('auth.employee_login_page'))
+
 #Signup Routes
 
 BASE_LAT = 26.2389  # Jodhpur Latitude
@@ -85,8 +89,4 @@ def employee_signup():
 
     return jsonify({"message": "Employee user registered successfully"}), 201
 
-@auth_bp.route('/login', methods=['GET'])
-def login_page_redirect():
-    # Redirect to the employee login page by default
-    return redirect(url_for('auth.employee_login_page'))
 

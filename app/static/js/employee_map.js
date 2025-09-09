@@ -1,13 +1,24 @@
 document.addEventListener('DOMContentLoaded', (event) => {
-    const map = L.map('map').setView([26.2389, 73.0243], 13);
+    // Restore saved map view or use default
+    const savedView = localStorage.getItem('employeeMapView');
+    let initialView, initialZoom;
+    
+    if (savedView) {
+        const viewData = JSON.parse(savedView);
+        initialView = [viewData.lat, viewData.lng];
+        initialZoom = viewData.zoom;
+    } else {
+        initialView = [26.2389, 73.0243];
+        initialZoom = 13;
+    }
+    
+    const map = L.map('map').setView(initialView, initialZoom);
     const statusMessage = document.getElementById('status-message');
     const requestTripBtn = document.getElementById('request-trip-btn');
     const updateLocationBtn = document.getElementById('update-location-btn');
     const confirmLocationBtn = document.getElementById('confirm-location-btn');
     const cancelLocationBtn = document.getElementById('cancel-location-btn');
     const finishTripBtn = document.getElementById('finish-trip-btn');
-    const reRequestTripBtn = document.getElementById('re-request-trip-btn');
-    const cancelledTripIdInput = document.getElementById('cancelled-trip-id');
     
     let myLocationMarker = null;
     let allocatedCabMarker = null;
@@ -46,6 +57,22 @@ document.addEventListener('DOMContentLoaded', (event) => {
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
+
+    // Function to save current map view to localStorage
+    function saveMapView() {
+        const center = map.getCenter();
+        const zoom = map.getZoom();
+        const viewData = {
+            lat: center.lat,
+            lng: center.lng,
+            zoom: zoom
+        };
+        localStorage.setItem('employeeMapView', JSON.stringify(viewData));
+    }
+
+    // Save map view on zoom and pan events
+    map.on('zoomend', saveMapView);
+    map.on('moveend', saveMapView);
 
     // --- Custom Icons ---
     const createIcon = (color) => L.icon({
@@ -88,7 +115,11 @@ document.addEventListener('DOMContentLoaded', (event) => {
         })
             .addTo(map)
             .bindPopup('My Location').openPopup();
-        map.setView([userLocation.lat, userLocation.lon], 15);
+            
+        // Only center on user location if no saved view exists
+        if (!savedView) {
+            map.setView([userLocation.lat, userLocation.lon], 15);
+        }
     }
 
     if (typeof onTripCabs !== 'undefined') {
@@ -157,13 +188,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 updateLocationBtn.style.display = 'none'; // Hide the button
             } else {
                 statusMessage.textContent = `Error: ${data.message || data.msg}`;
-                if (data.status === 'cancelled') {
-                    cancelledTripIdInput.value = data.trip_id;
-                    reRequestTripBtn.style.display = 'block';
-                    requestTripBtn.style.display = 'none';
-                } else {
-                    requestTripBtn.disabled = false;
-                }
+                requestTripBtn.disabled = false;
             }
         } catch (error) {
             statusMessage.textContent = 'An unexpected error occurred.';
@@ -172,44 +197,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
         }
     });
 
-    reRequestTripBtn.addEventListener('click', async () => {
-        const tripId = cancelledTripIdInput.value;
-        if (!tripId) {
-            alert('Error: No cancelled trip ID found.');
-            return;
-        }
-        statusMessage.textContent = 'Re-requesting trip...';
-        reRequestTripBtn.disabled = true;
-
-        try {
-            const csrfToken = getCookie('csrf_access_token');
-            const response = await fetch(`/employee/re-request-trip/${tripId}`,
-             {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': csrfToken
-                },
-                credentials: 'include',
-            });
-
-            const data = await response.json();
-            if (response.ok) {
-                myTripId = data.trip_id;
-                statusMessage.textContent = `Trip Requested (ID: ${myTripId}). Waiting for allocation.`;
-                reRequestTripBtn.style.display = 'none';
-                requestTripBtn.style.display = 'block';
-                requestTripBtn.disabled = true;
-            } else {
-                statusMessage.textContent = `Error: ${data.message || data.msg}`;
-                reRequestTripBtn.disabled = false;
-            }
-        } catch (error) {
-            statusMessage.textContent = 'An unexpected error occurred.';
-            console.error('Request failed:', error);
-            reRequestTripBtn.disabled = false;
-        }
-    });
 
     updateLocationBtn.addEventListener('click', () => {
         if (!myLocationMarker) {
