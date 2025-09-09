@@ -58,7 +58,7 @@ def dashboard_view():
                 'employee_id': employee.public_id
             })
 
-    return render_template('index.html', all_cabs=all_cabs, pending_trips=pending_trips, in_progress_trips=in_progress_trips)
+    return render_template('admin_dashboard.html', all_cabs=all_cabs, pending_trips=pending_trips, in_progress_trips=in_progress_trips)
 
 
 

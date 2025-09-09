@@ -1,10 +1,9 @@
 import random
 from flask import request, jsonify, render_template, redirect, url_for
-from. import auth_bp
-from..models import User
-from..extensions import db
+from . import auth_bp
+from ..models import User
+from ..extensions import db
 from flask_jwt_extended import create_access_token, set_access_cookies
-from flask_jwt_extended import jwt_required, get_jwt_identity
 
 # login routes
 
@@ -19,9 +18,9 @@ def login_post():
     if not user or not user.check_password(data['password']):
         return jsonify({"message": "Invalid credentials"}), 401
 
-    access_token = create_access_token(identity=user.public_id)
-    response = jsonify({"message": "Login successful"})
-    set_access_cookies(response, access_token)
+    access_token = create_access_token(identity=user.public_id) # creating JWT tocken that have user.public_id information
+    response = jsonify({"message": "Login successful"}) 
+    set_access_cookies(response, access_token) # storing that JWT tocken in secure cookies
     return response
 
 @auth_bp.route('/admin/login', methods=['GET'])

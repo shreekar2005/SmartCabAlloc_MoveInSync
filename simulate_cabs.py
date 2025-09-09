@@ -81,6 +81,8 @@ if __name__ == "__main__":
                     
                     # cab has a destination and is on a trip
                     if cab.destination_latitude is not None and cab.destination_longitude is not None:
+                        if cab.id in cab_nodes:
+                            del cab_nodes[cab.id] # we have to clear this to stop teleportation (bahot dimag khaya iss bug ne)
                         # if cab just got a destination, calculate its route
                         if cab.id not in cab_routes or not cab_routes[cab.id]['route']:
                             print(f"Cab {cab.id} calculating route to destination...")
@@ -108,12 +110,10 @@ if __name__ == "__main__":
                             cab.current_lon = graph.nodes[next_node]['x']
                             state['index'] += 1
                         else:
+                            # when trip is over
                             print(f"Cab {cab.id} has arrived at its destination.")
-                            # when trip is over, clear destination and route
-                            cab.destination_latitude = None
-                            cab.destination_longitude = None
-                            cab.status = 'available'
-                            cab_routes[cab.id] = {'route': [], 'index': 0}
+                            if cab.id in cab_routes:
+                                del cab_routes[cab.id]
 
                     # cab is available and moves randomly
                     else:

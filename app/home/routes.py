@@ -1,4 +1,4 @@
-from. import home_bp
+from . import home_bp
 
 @home_bp.route('/', methods=['POST','GET'])
 def index():

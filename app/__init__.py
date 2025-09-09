@@ -68,7 +68,7 @@ def create_app(config_class=Config):
                 cab.current_lat = lat
                 cab.current_lon = lon
                 db.session.commit()
-                
+
                 # broadcast the update to all connected clients
                 socketio.emit('location_update', {
                     'cab_id': cab.id,

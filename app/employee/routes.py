@@ -3,7 +3,6 @@ from . import employee_bp
 from ..models import Cab, User, Trip
 from ..extensions import db, socketio
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime
 
 @employee_bp.route('/dashboard')
 @jwt_required()
@@ -141,7 +140,6 @@ def finish_employee_trip():
 
     # update the trip
     trip.status = 'completed'
-    trip.end_time = datetime.utcnow()
 
     # free up the cab
     if allocated_cab:
